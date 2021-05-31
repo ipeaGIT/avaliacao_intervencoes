@@ -32,10 +32,10 @@ stops_df <- read_sheet("https://docs.google.com/spreadsheets/d/1vhz_cV1rRj6aKPpR
 
 
 routes_df <- read_sheet("https://docs.google.com/spreadsheets/d/1vhz_cV1rRj6aKPpROmZCe-4fyepp2E3-b_91pBsZ73I/edit?usp=sharing",
-                       sheet = "routes_df") %>% setDT()
+                        sheet = "routes_df") %>% setDT()
 
 
-line_shape <- st_read("C:/Users/kaue/Documents/linha_leste_kaue_gearth.gpkg") %>%
+line_shape <- st_read("../../data-raw/avaliacao_intervencoes/linha_leste_kaue_gearth.gpkg") %>%
   mutate(route_id = "LL", 
          direction_id = 0) %>%
   select(route_id, direction_id)
@@ -57,12 +57,13 @@ line_shape <- rbind(line_shape, st_reverse(line_shape)) %>%
 # mapview(stops_sf)
 
 stops_crs <- 31984
+service_id <- c("weekdays", "weekends")
 
 create_stoptimes_by_line <- function(gtfs, 
                                      headways_df, ttime_df, stops_df, routes_df,
-                                     line_shape, line_both_directions = TRUE,
+                                     line_shape, 
+                                     agency_id,
                                      service_id = c("weekdays", "weekends"),
-                                     agency_id = c("guess"),
                                      stops_crs) {
   
   
@@ -71,7 +72,7 @@ create_stoptimes_by_line <- function(gtfs,
                                         files = c("agency", "calendar"))
   
   # select service_id based on the calendar choice
-  if (calendar_days == "weekdays") {
+  if (service_id == "weekdays") {
     
     # filter only weekdays
     service_id1 <- gtfs_original$calendar[monday == 1 & tuesday == 1 & wednesday == 1 & thursday == 1 & friday == 1]$service_id
@@ -83,7 +84,7 @@ create_stoptimes_by_line <- function(gtfs,
     }
     
     # get the first one
-    service_id <- unique(service_id)[1]
+    service_id1 <- unique(service_id1)[1]
     
   } else if (calendar_days == "weekends") {
     
@@ -206,78 +207,18 @@ create_stoptimes_by_line <- function(gtfs,
                  sort = FALSE,
                  allow.cartesian=TRUE)
   
-  # df[, .(arrival_time = rep(start_trip, each = nstops)
-  #        # stop_sequence = seq_along(.N)), 
-  # ),
-  # 
-  # 
-  # by = .(route_id, direction_id)]
-  
-  
-  
-  
-  
-  # # create temporary df with the stop_times with correct start_trip but not with correct time between stops
-  # df_v1 <- rbind(
-  #   
-  #   # ida
-  #   data.table(
-  #     # trip_id      = rep(stop_times_teste_sub$trip_id, nrow(df)),
-  #     direction_id = 0,
-  #     arrival_time = rep(df[direction_id == 0]$start_trip,  each = nstops),
-  #     headway      = rep(c(0, ttime_df[direction_id == 0]$ttime), times = nrow(df[direction_id == 0]))),
-  #   
-  #   # volta
-  #   data.table(
-  #     # trip_id      = rep(stop_times_teste_sub$trip_id, nrow(df)),
-  #     direction_id = 1,
-  #     arrival_time = rep(df[direction_id == 1]$start_trip,  each = nstops),
-  #     headway      = rep(c(0, ttime_df[direction_id == 1]$ttime), times = nrow(df[direction_id == 1])))
-  #   
-  # )
-  # 
-  # # create unique id for each new trip
-  # df_v1[, trip_id := paste0(unique(headways_df$route_id), "_", direction_id, "_", rleid(arrival_time)),
-  #       by = direction_id]
-  # # create stop_sequence
-  # df_v1[, stop_sequence := 1:.N, by = trip_id]
-  
-  # add delay to each stop
-  # df_v1[, departure_time_novo := as.numeric(arrival_time) + delay]
   
   # cum sum of headway between each stop, by the trip_id
   df_v1[, ttime_cum := cumsum(ttime), by = trip_id]
   
   # sum cumulative headway to create a corrected departure_time
-  df_v1[, arrival_time := as.numeric(start_trip) + headway_cum]
+  df_v1[, arrival_time := as.numeric(start_trip) + ttime_cum]
   # departure_time is arrival_time plus delay
   # df_v1[, departure_time_novo := arrival_time_novo + delay]
   
   # convert them back to itime
   df_v1[, arrival_time := as.ITime(arrival_time)]
   df_v1[, departure_time := as.ITime(arrival_time)]
-  
-  # # create stops with stop_sequence
-  # stops_df1 <- 
-  #   rbind(
-  #     
-  #     data.table(
-  #       direction_id = 0,
-  #       stop_id = unique(c(ttime_df[direction_id == 0]$stop_id_start, 
-  #                          ttime_df[direction_id == 0]$stop_id_end)),
-  #       stop_sequence = 1:nstops),
-  #     
-  #     data.table(
-  #       direction_id = 1,
-  #       stop_id = unique(c(ttime_df[direction_id == 1]$stop_id_start, 
-  #                          ttime_df[direction_id == 1]$stop_id_end)),
-  #       stop_sequence = 1:nstops)
-  #     
-  #   )
-  # 
-  # # bring stopid
-  # df_fim <- left_join(df_v1, stops_df1[, .(direction_id, stop_sequence, stop_id)],
-  #                     by = c("stop_sequence", "direction_id")) %>% setDT()
   
   # organize columns
   stop_times <- df_v1 %>%
@@ -290,38 +231,8 @@ create_stoptimes_by_line <- function(gtfs,
   # generate new shapes -------------------------------------------------------------------------
   
   # colunas: shape_id, shape_pt_lat, shape_pt_lon, shape_pt_sequence, shape_dist_traveled
-  source("teste_linha_leste_shapes.R")
+  source("R/teste_linha_leste_shapes.R")
   shapes <- line_to_shapes(line_shape)
-  
-  # assemble shapes
-  
-  # when the same shape is used both for inbound (0) and outbound (0) trips,
-  # we assume that the input shape is the inbound one and that the outbound
-  # one will be the reverse of the inbound
-  # what will define if the shape is inbound or outbound is the sequence of the shape points
-  # if (line_both_directions) {
-  #   
-  #   shapes <- rbind(
-  #     
-  #     # ida
-  #     data.table(shape_id = paste0(unique(headways_df$route_id), "_0"),
-  #                shape_pt_lat = shapes$lat,
-  #                shape_pt_lon = shapes$lon,
-  #                shape_pt_sequence = shapes$shape_pt_sequence,
-  #                shape_dist_traveled = shapes$shape_dist_traveled
-  #     ),
-  #     # volta
-  #     data.table(shape_id = paste0(unique(headways_df$route_id), "_1"),
-  #                shape_pt_lat = rev(shapes$lat),
-  #                shape_pt_lon = rev(shapes$lon),
-  #                shape_pt_sequence = shapes$shape_pt_sequence,
-  #                shape_dist_traveled = rev(shapes$shape_dist_traveled)
-  #     )
-  #     
-  #     
-  #   )
-  #   
-  # } 
   
   
   
@@ -340,51 +251,26 @@ create_stoptimes_by_line <- function(gtfs,
   
   
   
-  # check stops and shapes ----------------------------------------------------------------------
-  
-  
-  
   
   # generate new routes -------------------------------------------------------------------------
   # colunas: route_id, agency_id, route_short_name, route_long_name, route_type
   
-  # routes <- data.table(
-  #   route_id = unique(headways_df$route_id),
-  #   agency_id = unique(gtfs_original$agency_id)[1],
-  #   route_short_name = c("LL"),
-  #   route_long_name = c("Metro Linha Leste"),
-  #   route_type = c(1)
-  # ) 
-  
   routes <- routes_df[, agency_id := unique(gtfs_original$agency$agency_id)[1]]
-  
   
   
   
   # generate new trips --------------------------------------------------------------------------
   # colunas: route_id, service_id, trip_id, direction_id, shape_id
   
-  # trips <- data.table(route_id = unique(headways_df$route_id),
-  #                         service_id = 4,
-  #                         trip_id = unique(df_fim_go$trip_id),
-  #                         direction_id = unique(headways_df$direction_id))
+  # first, select only unique trips
+  trips <- distinct(df_v1, trip_id, route_id, direction_id, .keep_all = TRUE) %>% setDT()
+  # bring service_id
+  trips[, service_id := service_id1]
+  # identify shape_id
+  trips[, shape_id := paste0(route_id, "_", direction_id)]
+  # select vars
+  trips <- trips[, .(route_id, service_id, trip_id, direction_id, shape_id)]
   
-  
-  
-  trips <- distinct(df_v1, trip_id, .keep_all = TRUE) %>% 
-    mutate(route_id = unique(headways_df$route_id),
-           service_id = service_id1) %>%
-    select(route_id, service_id, trip_id, direction_id) %>%
-    # odentofy shape_id
-    mutate(shape_id = paste0(route_id, "_", direction_id))
-  
-  
-  
-  
-  
-  
-  # generate new calendar -----------------------------------------------------------------------
-  # colunas: service_id, monday, tuesday, wednesday, thursday, friday, saturday, sunday, start_date, end_date
   
   
   
@@ -396,7 +282,7 @@ create_stoptimes_by_line <- function(gtfs,
                    trips = trips, 
                    shapes = shapes)
   
-  # teste
+  # we need to identify it as 'dt_gtfs' class so it can match with the original gtfs
   class(gtfs_new) <- 'dt_gtfs'
   
   gtfs_merge <- gtfstools::merge_gtfs(
