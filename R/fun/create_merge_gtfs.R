@@ -1,70 +1,13 @@
 
-library(dplyr)
-library(data.table)
-library(tidyr)
-library(sf)
-library(mapview)
-library(googlesheets4) # install.packages("googlesheets4")
-library(gtfstools) # install.packages('gtfstools')
 
 
 
-# open metrofor gtfs --------------------------------------------------------------------------
-
-gtfs <- "C:/Users/kaue/Downloads/gtfs_for_metrofor_2021-01.zip"
-
-# spreadshhet here
-# https://docs.google.com/spreadsheets/d/1vhz_cV1rRj6aKPpROmZCe-4fyepp2E3-b_91pBsZ73I/edit?usp=sharing
-
-headways_df <- read_sheet("https://docs.google.com/spreadsheets/d/1vhz_cV1rRj6aKPpROmZCe-4fyepp2E3-b_91pBsZ73I/edit?usp=sharing",
-                          sheet = "headways_df", skip = 7) %>% setDT()
-
-
-
-ttime_df <- read_sheet("https://docs.google.com/spreadsheets/d/1vhz_cV1rRj6aKPpROmZCe-4fyepp2E3-b_91pBsZ73I/edit?usp=sharing",
-                       sheet = "ttime_df", skip = 7) %>% setDT()
-
-
-
-
-stops_df <- read_sheet("https://docs.google.com/spreadsheets/d/1vhz_cV1rRj6aKPpROmZCe-4fyepp2E3-b_91pBsZ73I/edit?usp=sharing",
-                       sheet = "stops_df", skip = 7) %>% setDT()
-
-
-routes_df <- read_sheet("https://docs.google.com/spreadsheets/d/1vhz_cV1rRj6aKPpROmZCe-4fyepp2E3-b_91pBsZ73I/edit?usp=sharing",
-                        sheet = "routes_df", skip = 7) %>% setDT()
-
-
-line_shape <- st_read("../../data-raw/avaliacao_intervencoes/linha_leste_kaue_gearth.gpkg") %>%
-  mutate(route_id = "LL", 
-         direction_id = 0) %>%
-  select(route_id, direction_id)
-
-# teste
-line_shape <- rbind(line_shape, st_reverse(line_shape)) %>%
-  mutate(direction_id = c(0, 1))
-
-
-
-
-
-# stops_sf <- st_as_sf(stops_df, coords = c("stop_lon", "stop_lat"),
-#                      # crs SIRGAS 2000 / UTM zone 24S
-#                      crs = 31984
-# ) %>%
-#   st_transform(4326)
-# 
-# mapview(stops_sf)
-
-stops_crs <- 31984
-service_id <- c("weekdays", "weekends")
-
-create_stoptimes_by_line <- function(gtfs, 
-                                     headways_df, ttime_df, stops_df, routes_df,
-                                     line_shape, 
-                                     agency_id = "guess",
-                                     service_id = c("weekdays", "weekends"),
-                                     stops_crs) {
+create_merge_gtfs <- function(gtfs, 
+                        headways_df, ttime_df, stops_df, routes_df,
+                        line_shape, 
+                        agency_id = "guess",
+                        service_id = c("weekdays", "weekends"),
+                        stops_crs = 4326) {
   
   
   # # open original gtfs
@@ -302,17 +245,3 @@ create_stoptimes_by_line <- function(gtfs,
   return(gtfs_merge)
   
 }
-
-
-
-a <- create_stoptimes_by_line(gtfs = gtfs,
-                              headways_df = headways_df,
-                              ttime_df = ttime_df,
-                              stops_df = stops_df,
-                              routes_df = routes_df,
-                              line_shape = line_shape,
-                              service_id = "weekdays",
-                              stops_crs = 31984
-)
-
-
