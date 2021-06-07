@@ -19,3 +19,10 @@ validator_gtfs <- function(file, dir_output) {
 }
 
 
+
+# 1 - Fortaleza METROFOR --------------------------------------------------
+
+
+validator_gtfs("../../../data/avaliacao_intervencoes/fortaleza/gtfs_for_metrofor_2021-01_new.zip",
+               "../../../data/avaliacao_intervencoes/fortaleza/validator_gtfs_for_metrofor_2021-01_new.html")
+
