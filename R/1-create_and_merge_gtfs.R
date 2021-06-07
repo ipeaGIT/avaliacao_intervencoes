@@ -11,7 +11,7 @@ library(gtfstools) # install.packages('gtfstools')
 
 # 1) Fortaleza - metro linha leste ex-ante ---------------------------------------------------
 
-gtfs_path <- "C:/Users/kaue/Downloads/gtfs_for_metrofor_2021-01.zip"
+gtfs_path <- "../../data-raw/avaliacao_intervencoes/fortaleza/gtfs_for_metrofor_2021-01.zip"
 
 
 # open tables - they are in a spreadsheet
@@ -33,7 +33,7 @@ routes_df <- read_sheet("https://docs.google.com/spreadsheets/d/1vhz_cV1rRj6aKPp
 
 
 # open lines
-line_shape <- st_read("../../data-raw/avaliacao_intervencoes/linha_leste_kaue_gearth.gpkg") %>%
+line_shape <- st_read("../../data-raw/avaliacao_intervencoes/fortaleza/linha_leste_kaue_gearth.gpkg") %>%
   # identify route and direction
   mutate(route_id = "LL", 
          direction_id = 0) %>%
@@ -58,16 +58,21 @@ line_shape <- rbind(line_shape, st_reverse(line_shape)) %>%
 
 
 # apply function to create the new gtfs and merge to the original one
+purrr::walk(list.files("R/fun", full.names = TRUE), source)
 
-a <- create_gtfs(gtfs = gtfs,
-                 headways_df = headways_df,
-                 ttime_df = ttime_df,
-                 stops_df = stops_df,
-                 routes_df = routes_df,
-                 line_shape = line_shape,
-                 service_id = "weekdays",
-                 stops_crs = 31984
+a <- create_merge_gtfs(gtfs = gtfs_path,
+                       headways_df = headways_df,
+                       ttime_df = ttime_df,
+                       stops_df = stops_df,
+                       routes_df = routes_df,
+                       line_shape = line_shape,
+                       service_id = "weekdays",
+                       stops_crs = 31984
 )
+
+# export gtfs
+gtfstools::write_gtfs(a, path = "../../data/avaliacao_intervencoes/fortaleza/gtfs_for_metrofor_2021-01_new.zip")
+
 
 
 

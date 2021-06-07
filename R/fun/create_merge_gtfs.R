@@ -149,16 +149,21 @@ create_merge_gtfs <- function(gtfs,
   # sum cumulative ttime to create a corrected arrival_time/departure_time
   df_v1[, arrival_time := as.numeric(start_trip) + ttime_cum]
   
-  # convert them back to itime
-  df_v1[, arrival_time := as.ITime(arrival_time)]
-  df_v1[, departure_time := as.ITime(arrival_time)]
+  # round arrival_time
+  df_v1[, arrival_time := round(arrival_time, 0)]
+  
+  # convert arrival_time to hms::hms
+  # prefrebly we would convert it to ITime (faster), but ITime convert
+  # times past 00:00:00 to 24h format, and we dont want that
+  df_v1[, arrival_time := hms::hms(arrival_time)]
+  df_v1[, departure_time := arrival_time]
+  
+  # convert to character
+  df_v1[, ':='(arrival_time = as.character(arrival_time),
+                    departure_time = as.character(departure_time))]
   
   # select columns
   stop_times <- df_v1[, .(trip_id, arrival_time, departure_time, stop_id, stop_sequence)]
-  
-  # convert to character
-  stop_times[, ':='(arrival_time = as.character(arrival_time),
-                    departure_time = as.character(departure_time))]
   
   
   
@@ -168,7 +173,7 @@ create_merge_gtfs <- function(gtfs,
   # generate new shapes -------------------------------------------------------------------------
   
   # columns: shape_id, shape_pt_lat, shape_pt_lon, shape_pt_sequence, shape_dist_traveled
-  source("R/teste_linha_leste_shapes.R")
+  # source("R/teste_linha_leste_shapes.R")
   shapes <- line_to_shapes(line_shape)
   
   
