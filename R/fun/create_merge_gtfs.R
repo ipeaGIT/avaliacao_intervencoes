@@ -91,7 +91,7 @@ create_merge_gtfs <- function(gtfs,
   # }
   
   # 1. Calculate number of trips each hour ------------------------------------------------------
-  headways_df[, n_trips := floor((hour_end-hour_start)*60/headway), by = .(route_id, direction_id)]
+  headways_df[, n_trips := floor((hour_end-hour_start)*60/headway), by = .(route_id, direction_id, service)]
   # change start_time to ITime
   headways_df[, start_trip := as.ITime(paste0(hour_start, ":00:00"))]
   
@@ -104,21 +104,23 @@ create_merge_gtfs <- function(gtfs,
     route_id = rep(headways_df$route_id, headways_df$n_trips),
     direction_id = rep(headways_df$direction_id, headways_df$n_trips),
     start_trip = rep(headways_df$start_trip, headways_df$n_trips),
-    headway = rep(headways_df$headway * 60, headways_df$n_trips))
+    headway = rep(headways_df$headway * 60, headways_df$n_trips),
+    service = rep(headways_df$service, headways_df$n_trips)
+    )
   
   # tag each interval, which are the trips with unique headways
   df[, interval := rleid(start_trip)]
   
   # cum sum of headway of each interval of unique headways
-  df[, headway_cum := cumsum(c(0, headway[-.N])), by = .(route_id, interval, direction_id)]
+  df[, headway_cum := cumsum(c(0, headway[-.N])), by = .(route_id, interval, direction_id, service)]
   
   # apply cumulative headways to each start trip - now we have corrects start trips
   df[, start_trip := start_trip + headway_cum]
   df[, start_trip := as.ITime(start_trip)]
   
   # identify trip_id
-  df[, trip_id := paste0(route_id, "-", direction_id, "-", rleid(start_trip)),
-     by = .(route_id, direction_id)]
+  df[, trip_id := paste0(route_id, "-", direction_id, ".", service, "-", rleid(start_trip)),
+     by = .(route_id, direction_id, service)]
   
   
   
@@ -128,15 +130,15 @@ create_merge_gtfs <- function(gtfs,
   ttime_df_long <-  ttime_df[, .(stop_id = rep(unique(c(stop_id_start, stop_id_end)), each = 1),
                                  ttime = c(0, ttime)
   ),
-  by = .(route_id, direction_id) ]
+  by = .(route_id, direction_id, service) ]
   
   # add stop_sequence
-  ttime_df_long[, stop_sequence := 1:.N, by = .(route_id, direction_id)]
+  ttime_df_long[, stop_sequence := 1:.N, by = .(route_id, direction_id, service)]
   
   # bring nstops to df
   # this merge will automactcicly replicate each trip start by the number of stops of that route-direction pair
   df_v1 <- merge(df, ttime_df_long,
-                 by = c("route_id", "direction_id"),
+                 by = c("route_id", "direction_id", "service"),
                  sort = FALSE,
                  # this argument will allow the df to multiply by the number of stops
                  allow.cartesian=TRUE)
