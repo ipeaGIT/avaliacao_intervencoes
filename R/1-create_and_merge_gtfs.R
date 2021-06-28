@@ -11,7 +11,7 @@ library(gtfstools) # install.packages('gtfstools')
 
 # 1) Fortaleza - metro linha leste ex-ante ---------------------------------------------------
 
-gtfs <- "../../data-raw/avaliacao_intervencoes/for/gtfs_for_metrofor_2021-01.zip"
+gtfs <- "../../data-raw/avaliacao_intervencoes/for/gtfs_for_metrofor_2018-11_mod.zip"
 
 
 # open tables - they are in a spreadsheet
@@ -60,7 +60,7 @@ line_shape <- rbind(line_shape, st_reverse(line_shape)) %>%
 # apply function to create the new gtfs and merge to the original one
 purrr::walk(list.files("R/fun", full.names = TRUE), source)
 
-a <- create_merge_gtfs(gtfs = gtfs_path,
+a <- create_merge_gtfs(gtfs = gtfs,
                        headways_df = headways_df,
                        ttime_df = ttime_df,
                        stops_df = stops_df,
@@ -71,7 +71,7 @@ a <- create_merge_gtfs(gtfs = gtfs_path,
 )
 
 # export gtfs
-gtfstools::write_gtfs(a, path = "../../data/avaliacao_intervencoes/fortaleza/gtfs_for_metrofor_2021-01_new.zip")
+gtfstools::write_gtfs(a, path = "../../data/avaliacao_intervencoes/for/gtfs_for_metrofor_2018-11_mod_depois.zip")
 
 
 
