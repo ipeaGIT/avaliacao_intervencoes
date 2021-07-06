@@ -7,11 +7,11 @@ library(readr)
 
 
 
-calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
+calcular_acess_muni <- function(sigla_muni) {
   
   
   # status message
-  message('Woking on city ', sigla_muni, ' at year ', ano,  '\n')
+  message('Woking on city ', sigla_muni)
   
   # 1) Abrir tttmatrix ---------------------------------------------------
   
@@ -102,11 +102,16 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
   acess_cma <- "CMA"
-  atividade_cma <- c("TT", "TQ", "TD", "ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM"
+  atividade_cma <- c("TT", #"TQ", "TD", 
+                     "ST", "SB", "SM", "SA", 
+                     "ET", "EI", "EF", "EM"
                      # "MT", "MI", "MF", "MM"
   )
   # criar dummy para tt
   tt <- c(1, 2, 3, 4)
+  
+  # tipo
+  # tipo <- c("A", "D")
   
   grid_cma <- expand.grid(acess_cma, atividade_cma, tt, stringsAsFactors = FALSE) %>%
     rename(acess_sigla = Var1, atividade_sigla = Var2, tt_sigla = Var3) %>%
@@ -132,293 +137,60 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
                                       atividade_sigla == "MT" ~ "mat_total",
                                       atividade_sigla == "MF" ~ "mat_fundamental",
                                       atividade_sigla == "MM" ~ "mat_medio",
-                                      atividade_sigla == "MI" ~ "mat_infantil"))
+                                      atividade_sigla == "MI" ~ "mat_infantil")) %>% setDT()
   
   
   # gerar o codigo
   # para tp
-  codigo_cma_tp <- c(
+  codigo_cma_a <- c(
     
-    sprintf("%s = (sum(%s[which(travel_time_antes <= %s)], na.rm = T))", 
-            grid_cma$junto_tp, 
-            grid_cma$atividade_nome, 
-            grid_cma$tt_tp
-    ),
-    
-    sprintf("%s = (sum(%s[which(travel_time_depois <= %s)], na.rm = T))", 
+    sprintf("%s = (sum(%s[which(ttime_antes <= %s)], na.rm = T))", 
             grid_cma$junto_tp, 
             grid_cma$atividade_nome, 
             grid_cma$tt_tp
     )
+    
+  )
   
+  codigo_cma_d <- c(
+    
+    sprintf("%s = (sum(%s[which(ttime_depois <= %s)], na.rm = T))", 
+            grid_cma$junto_tp, 
+            grid_cma$atividade_nome, 
+            grid_cma$tt_tp
     )
+    
+  )
   
   
   # dar nomes às variaveis
-  to_make_cma_tp <-    setNames(codigo_cma_tp,    sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_tp))
+  to_make_cma_a <-    setNames(codigo_cma_a,    sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_a))
+  to_make_cma_d <-    setNames(codigo_cma_d,    sub('^([[:alnum:]]*) =.*', '\\1', codigo_cma_d))
   
   
   
-  # so para modos ativos
-  acess_cma <- ttmatrix[, 
-                        lapply(to_make_cma_ativo, function(x) eval(parse(text = x)))
-                        , by=.(city, mode, origin, pico, quintil, decil)]
+  # rodar funcao para calcular access
+  acess_cma_a <- ttmatrix[, 
+                        lapply(to_make_cma_a, function(x) eval(parse(text = x)))
+                        , by=.(city, mode, origin, quintil, decil, pop_total)]
+  acess_cma_a[, tipo := "antes"]
+  
+  
+  acess_cma_d <- ttmatrix[, 
+                        lapply(to_make_cma_d, function(x) eval(parse(text = x)))
+                        , by=.(city, mode, origin, quintil, decil, pop_total)]
+  acess_cma_d[, tipo := "depois"]
+  
+  
+  # juntar
+  acess_cma <- rbind(acess_cma_a, acess_cma_d)
   
   
   
-  
-  
-  
-  
-  # 5) Calcular acessibilidade tempo minimo ---------------
-  # (aqui eh feito junto para os dois modos)
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-  
-  
-  acess_tmi <- "TMI"
-  atividade_tmi <- c("ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM")
-  
-  grid_tmi <- expand.grid(acess_tmi, atividade_tmi, stringsAsFactors = FALSE) %>%
-    rename(acess_sigla = Var1, atividade_sigla = Var2) %>%
-    mutate(junto = paste0(acess_sigla, atividade_sigla)) %>%
-    mutate(atividade_nome = case_when(atividade_sigla == "ST" ~ "saude_total",
-                                      atividade_sigla == "SB" ~ "saude_baixa",
-                                      atividade_sigla == "SM" ~ "saude_media",
-                                      atividade_sigla == "SA" ~ "saude_alta",
-                                      atividade_sigla == "ET" ~ "edu_total",
-                                      atividade_sigla == "EI" ~ "edu_infantil",
-                                      atividade_sigla == "EF" ~ "edu_fundamental",
-                                      atividade_sigla == "EM" ~ "edu_medio",
-                                      atividade_sigla == "EI" ~ "edu_infantil"))
-  
-  
-  # gerar o codigo
-  codigo_tmi <- sprintf("%s = min(tt_median[which(%s >= 1)])", 
-                        grid_tmi$junto, 
-                        grid_tmi$atividade_nome)
-  
-  
-  # gerar os nomes das variaveis
-  to_make_tmi <- setNames(codigo_tmi, sub('^([[:alnum:]]*) =.*', '\\1', codigo_tmi))
-  
-  
-  # calcular acessibilidade
-  acess_tmi <- ttmatrix[, lapply(to_make_tmi, function(x) eval(parse(text = x)))
-                        , by=.(city, mode, origin, pico)]
-  
-  # hexagonos_sf <- st_sf(hexagonos_sf)
-  # 
-  # ggplot() + geom_sf(data=hexagonos_sf ,fill='gray') +
-  #  geom_sf(data=subset(hexagonos_sf, saude_media>0) , aes(fill=saude_media))
-  # 
-  # ggplot() + geom_sf(data=hexagonos_sf ,fill='gray') +
-  #   geom_sf(data=subset(hexagonos_sf, saude_baixa>0) , aes(fill=saude_baixa))
-  # 
-  # 
-  
-  
-  # 6) Calcular acessibilidade BFCA ---------------
-  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
-  
-  
-  acess_bfc <- "BFC"
-  atividade_bfc <- c("ST", "SB", "SM", "SA", "ET", "EI", "EF", "EM",
-                     "MT", "MI", "MF", "MM")
-  
-  # criar dummy para tt
-  tt_sigla <- c(1, 2, 3, 4)
-  
-  grid_bfc <- expand.grid(acess_bfc, atividade_bfc, tt_sigla, stringsAsFactors = FALSE) %>%
-    rename(acess_sigla = Var1, atividade_sigla = Var2, tt_sigla = Var3) %>%
-    # adicionar colunas de time threshold  para cada um dos modos
-    mutate(tt = case_when(
-      tt_sigla == 1 ~ 10,
-      tt_sigla == 2 ~ 40,
-      tt_sigla == 3 ~ 100,
-      tt_sigla == 4 ~ 180
-    )) %>% 
-    mutate(junto = paste0(acess_sigla, atividade_sigla, tt)) %>%
-    setDT()
-  
-  
-  # identificar as variaveis de atividade que vao ser utilizadas
-  grid_bfc[, atividade_nome := fcase(atividade_sigla == "TT", "empregos_total",
-                                     atividade_sigla == "TQ", "empregos_match_quintil",
-                                     atividade_sigla == "TD", "empregos_match_decil",
-                                     atividade_sigla == "ST", "saude_total",
-                                     atividade_sigla == "SB", "saude_baixa",
-                                     atividade_sigla == "SM", "saude_media",
-                                     atividade_sigla == "SA", "saude_alta",
-                                     atividade_sigla == "ET", "edu_total",
-                                     atividade_sigla == "EF", "edu_fundamental",
-                                     atividade_sigla == "EM", "edu_medio",
-                                     atividade_sigla == "EI", "edu_infantil",
-                                     atividade_sigla == "MT", "mat_total",
-                                     atividade_sigla == "MF", "mat_fundamental",
-                                     atividade_sigla == "MM", "mat_medio",
-                                     atividade_sigla == "MI", "mat_infantil")]
-  
-  
-  # identificar as variaveis de populacao que vao ser utilizadas para cada atividade
-  grid_bfc[, pop_nome := fcase(atividade_sigla == "TT", list("pop_total"),
-                               atividade_sigla == "TQ", list("pop_total"),
-                               atividade_sigla == "TD", list("pop_total"),
-                               atividade_sigla == "ST", list("pop_total"),
-                               atividade_sigla == "SB", list("pop_total"),
-                               atividade_sigla == "SM", list("pop_total"),
-                               atividade_sigla == "SA", list("pop_total"),
-                               
-                               # a definicao das idades por nivel de ensino vai ser 
-                               # limitada pelos intervalos de idade disponiveis
-                               # fonte: https://pt.wikipedia.org/wiki/Idade_escolar
-                               # educacao total: pop de 0 a 20 anos
-                               atividade_sigla == "ET", list(c("idade_0a5", "idade_6a14", "idade_15a18")),
-                               # educacao infantil: pop de 0 a 6 anos
-                               atividade_sigla == "EI", list("idade_0a5"),
-                               # educacao fund.: pop de 6 a 15 anos
-                               atividade_sigla == "EF", list(c("idade_6a14")),
-                               # educacao media: pop de 15 a 18 anos
-                               atividade_sigla == "EM", list(c("idade_15a18")), 
-                               
-                               # a mesma regra se aplica para as matriculas
-                               atividade_sigla == "MT", list(c("idade_0a5", "idade_6a14", "idade_15a18")),
-                               atividade_sigla == "MI", list("idade_0a5"),
-                               atividade_sigla == "MF", list(c("idade_6a14")),
-                               atividade_sigla == "MM", list(c("idade_15a18"))
-  )]
-  
-  
-  
-  # calculate bfca
-  # atividade <- "saude_alta"
-  # atividade <- "saude_total"
-  # atividade <- "edu_medio"
-  # atividade <- "edu_total"
-  calculate_bfc <- function(atividade) {
-    
-    
-    # subset the grid of this activity
-    grid_bfc1 <- filter(grid_bfc, atividade_nome == atividade)
-    
-    # get variables names that will compose the population (it depends on the activity)
-    # if there more than one pop_name, it will be sumed up
-    pop_target <- grid_bfc1$pop_nome %>% .[[1]] %>% unlist() %>% paste0(collapse = " + ")
-    
-    # filtrar A matrix de viagem até os hospitais com atividades
-    hex_dest_filter <- hex_dest[get(grid_bfc1$atividade_nome[1]) >= 1]
-    ttmatrix_hosp <- ttmatrix[destination %in% hex_dest_filter$id_hex]
-    
-    # calculate impedance (choose one)
-    
-    # gaussian
-    mgaus_f <- function(t_ij,b0){exp(-t_ij^2/b0)}
-    # ttmatrix_hosp[, impedance := neg_exp_f(dist, 0.45) ]
-    # ttmatrix_hosp[, impedance := mgaus_f(dist, 200) ]
-    # ttmatrix_hosp[mode == "transit", ':='(impedance1 = fifelse(tt_median <= grid_bfc1$tt_tp[1], 1, 0),
-    #                                       impedance2 = fifelse(tt_median <= grid_bfc1$tt_tp[2], 1, 0),
-    #                                       impedance3 = fifelse(tt_median <= grid_bfc1$tt_tp[3], 1, 0),
-    #                                       impedance4 = fifelse(tt_median <= grid_bfc1$tt_tp[4], 1, 0)) ] # binary
-    # ttmatrix_hosp[mode %in% c("bike", "walk"), ':='(impedance1 = fifelse(tt_median <= grid_bfc1$tt_ativo[1], 1, 0),
-    #                                                 impedance2 = fifelse(tt_median <= grid_bfc1$tt_ativo[2], 1, 0),
-    #                                                 impedance3 = fifelse(tt_median <= grid_bfc1$tt_ativo[3], 1, 0),
-    #                                                 impedance4 = fifelse(tt_median <= grid_bfc1$tt_ativo[4], 1, 0)) ] # binary
-    
-    #' para aplicar a funcao de decaimento gaussiana, foram escolhidos paremetros
-    #' de valor 10, 40, 100, 180
-    #' esses valores foram extraidos do artigo Kwan (1998)
-    ttmatrix_hosp[,':='(impedance1 = mgaus_f(tt_median, 10),
-                        impedance2 = mgaus_f(tt_median, 40),
-                        impedance3 = mgaus_f(tt_median, 100),
-                        impedance4 = mgaus_f(tt_median, 180)) ]
-    
-    # calculate weights i (normalized impedance by origin id)
-    ttmatrix_hosp[, wi1 := impedance1/sum(impedance1), by= .(origin, mode, pico)]
-    ttmatrix_hosp[, wi2 := impedance2/sum(impedance2), by= .(origin, mode, pico)]
-    ttmatrix_hosp[, wi3 := impedance3/sum(impedance3), by= .(origin, mode, pico)]
-    ttmatrix_hosp[, wi4 := impedance4/sum(impedance4), by= .(origin, mode, pico)]
-    # summary(ttmatrix_hosp$wi1)
-    
-    # calculate weights j (normalized impedance by destination)
-    ttmatrix_hosp[, wj1 := impedance1/sum(impedance1), by=.(destination, mode, pico)]
-    ttmatrix_hosp[, wj2 := impedance2/sum(impedance2), by=.(destination, mode, pico)]
-    ttmatrix_hosp[, wj3 := impedance3/sum(impedance3), by=.(destination, mode, pico)]
-    ttmatrix_hosp[, wj4 := impedance4/sum(impedance4), by=.(destination, mode, pico)]
-    # summary(ttmatrix_hosp$wj1)
-    
-    ## Step 1 - reaportion the demand to each hospital proportionally to weight i
-    ttmatrix_hosp1 <- copy(ttmatrix_hosp)
-    ttmatrix_hosp1[, pop_served1 := sum((eval(parse(text = pop_target))) * wi1, na.rm = TRUE), by= .(destination, mode, pico)]
-    ttmatrix_hosp1[, pop_served2 := sum((eval(parse(text = pop_target))) * wi2, na.rm = TRUE), by= .(destination, mode, pico)]
-    ttmatrix_hosp1[, pop_served3 := sum((eval(parse(text = pop_target))) * wi3, na.rm = TRUE), by= .(destination, mode, pico)]
-    ttmatrix_hosp1[, pop_served4 := sum((eval(parse(text = pop_target))) * wi4, na.rm = TRUE), by= .(destination, mode, pico)]
-    # summary(ttmatrix_hosp1$pop_served1)
-    
-    ## Step 2 - calculate provider-to-population ration (ppr) at each destination
-    ttmatrix_hosp1[, ':='(ppr1 = get(grid_bfc1$atividade_nome)[1] / pop_served1,
-                          ppr2 = get(grid_bfc1$atividade_nome)[1] / pop_served2,
-                          ppr3 = get(grid_bfc1$atividade_nome)[1] / pop_served3,
-                          ppr4 = get(grid_bfc1$atividade_nome)[1] / pop_served4), 
-                   by= .(destination, mode, pico)]
-    # summary(ttmatrix_hosp1$ppr)
-    
-    
-    ## Step 3 - reaportion ppr at each origin proportionally to weight j
-    bfca <- ttmatrix_hosp1[, .(BFCA1 = sum(ppr1 * wj1, na.rm=T),
-                               BFCA2 = sum(ppr2 * wj2, na.rm=T),
-                               BFCA3 = sum(ppr3 * wj3, na.rm=T),
-                               BFCA4 = sum(ppr4 * wj4, na.rm=T)),
-                           by= .(city, origin, mode, pico)]
-    # rename BFCA
-    colnames(bfca) <- c("city", "origin", "mode", "pico", grid_bfc1$junto)
-    # summary(bfca$BFCA)*10000
-    
-    return(bfca)
-    
-    
-  }
-  
-  
-  # apply fun to calculate bfca
-  acess_bfc <- lapply(unique(grid_bfc$atividade_nome), calculate_bfc)
-  # o nome das colunas de bfca eh diferente para cada um dos df, e a ideia eh
-  # que as colunas de bfca fiquem em formato largo
-  # para isso, eh preciso fazer a juncao de todas as bases pelas variaveis em comum
-  # a funcao 'reduce' aplica um funcao (no nosso caso, full_join) interativamente,
-  # sempre aplicando a funcao com o resultado da aplicacao anterior
-  acess_bfc <- acess_bfc %>% reduce(full_join, by = c("city", "origin", "mode", "pico"))
-  
-  # ATENCAO
-  # algumas origens nao vao ter valores calculados do BFCA, e isso acontece princiaplamente
-  # para caminhada e bike
-  # isso acontece pq esses hex nao conseguem acessar nenhuma atividade que esteja
-  # dentro do tempo limite de viagem do roteamento, que eh 90 mins para walk e bike
-  
-  
-  
-  
-  # 7) Juntar os arquivos de acess ------------------------------------------------
-  
-  
-  # Juntar os tres (left_join)
-  acess <- merge(acess_cma, acess_cmp,
-                 all.x = TRUE,
-                 by.x = c("city", "mode", "origin", "pico"),
-                 # como o cmp eh calculado para os destinos, o join eh para destination
-                 by.y = c("city", "mode", "destination", "pico"))
-  
-  acess <- merge(acess, acess_tmi,
-                 all.x = TRUE,
-                 by.x = c("city", "mode", "origin", "pico"),
-                 by.y = c("city", "mode", "origin", "pico"))
-  
-  acess <- merge(acess, acess_bfc,
-                 all.x = TRUE,
-                 by.x = c("city", "mode", "origin", "pico"),
-                 by.y = c("city", "mode", "origin", "pico"))
   
   
   # Transformar para sf
-  acess_sf <- merge(acess, setDT(hexagonos_sf)[, .(id_hex, geometry)],
+  acess_sf <- merge(acess_cma, setDT(hexagonos_sf)[, .(id_hex, geometry)],
                     by.x = "origin",
                     by.y = "id_hex",
                     all.x = TRUE) %>%
@@ -426,17 +198,11 @@ calcular_acess_muni <- function(sigla_muni, ano, engine = 'otp') {
     st_sf()
   
   
-  # identificar o ano
-  acess_sf <- acess_sf %>%
-    mutate(ano = ano)
   
   # 8) Salvar output --------------------------------------
   
-  path_out <- sprintf("../../data/acesso_oport/output_access/%s/%s/acess_%s_%s.rds", ano, engine, sigla_muni, ano)
+  path_out <- sprintf("../../data/avaliacao_intervencoes/output_access/acess_%s.rds", sigla_muni)
   write_rds(acess_sf, path_out)
-  
-  # gc colletc
-  gc(TRUE)
   
   
 }

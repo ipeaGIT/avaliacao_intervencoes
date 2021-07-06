@@ -16,6 +16,11 @@ calculate_ttmatrix <- function(sigla_muni) {
   max_trip_duration <- 180 # minutes
   departure_datetime <- as.POSIXct("02-03-2020 06:00:00", format = "%d-%m-%Y %H:%M:%S")
   
+  
+  # 1 - ttmatrix - antes ----------------------------------------------------
+  
+  
+  
   r5r_core <- setup_r5(data_path = sprintf("../../data/avaliacao_intervencoes/r5/graph/%s_antes/", sigla_muni), verbose = FALSE)
   
   # 3.1) calculate a travel time matrix
@@ -24,12 +29,14 @@ calculate_ttmatrix <- function(sigla_muni) {
                              destinations = points,
                              mode = mode,
                              departure_datetime = departure_datetime,
-                             time_window = 2,
+                             time_window = 120,
                              max_walk_dist = max_walk_dist,
                              max_trip_duration = max_trip_duration)
-  # classify
-  ttm1[, type := "before_intervention"]
   
+  
+  
+  
+  # 2 - ttmatrix - depois ----------------------------------------------------
   
   r5r_core <- setup_r5(data_path = sprintf("../../data/avaliacao_intervencoes/r5/graph/%s_depois/", sigla_muni), verbose = TRUE)
   
@@ -38,21 +45,23 @@ calculate_ttmatrix <- function(sigla_muni) {
                              destinations = points,
                              mode = mode,
                              departure_datetime = departure_datetime,
-                             time_window = 2,
+                             time_window = 120,
                              max_walk_dist = max_walk_dist,
                              max_trip_duration = max_trip_duration)
   
-  # classify
-  ttm1[, type := "after_intervention"]
+  # juntar matrizes
   
   ttm <- full_join(ttm1, ttm2,
                    by = c("fromId", "toId"),
                    suffix = c("_antes", "_depois"))
   
+  
   # rename
-  ttm <- ttm %>% rename(origin = fromId, destination = toId)
+  ttm <- ttm %>% 
+    mutate(city = "for", mode = "tp") %>%
+    select(city, mode, origin = fromId, destination = toId, ttime_antes = travel_time_antes, ttime_depois = travel_time_depois)
   
-  
+  setDT(ttm)[, dif := ttime_depois - ttime_antes] %>% View()
   
   # save
   readr::write_rds(ttm, sprintf("../../data/avaliacao_intervencoes/ttmatrix/ttmatrix_%s.rds", sigla_muni))
