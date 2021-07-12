@@ -21,13 +21,34 @@ calcular_acess_muni <- function(sigla_muni) {
   
   
   
+  
   # 2) Agregar dados de uso do solo à ttmatrix --------------------------
   
   # Pegar arquivo com os hexagonos com as atividades
   dir_hex <- sprintf("../../data/acesso_oport/hex_agregados/%s/hex_agregado_%s_09_%s.rds", "2019", sigla_muni, "2019")
   
+  
+  
+  
+  
   # Abrir oportunidades com hexagonos
   hexagonos_sf <- readr::read_rds(dir_hex) 
+  
+  
+  # hexagonos_sf %>% filter(id_hex %in% c("8980104e373ffff", "89801045a17ffff")) %>% st_sf() %>% mapview::mapView()
+  # 8980104e373ffff
+  # library(mapview)
+  # teste_centroid_origin <- hexagonos_sf %>% filter(id_hex %in% c("8980104e373ffff")) %>% st_centroid() %>% select(id = id_hex)
+  # teste_centroid_dest <- hexagonos_sf %>% filter(id_hex %in% c("89801045a17ffff")) %>% st_centroid() %>% select(id = id_hex)
+  # r5r_core <- setup_r5(data_path = sprintf("../../data/avaliacao_intervencoes/r5/graph/%s_antes/", sigla_muni), verbose = FALSE)
+  # snap <- r5r::find_snap(r5r_core, teste_centroid_origin, mode = c("WALK"))  %>% st_as_sf(crs = 4326, coords = c("lon", "lat"))
+  # snap <- r5r::find_snap(r5r_core, teste_centroid_dest, mode = c("WALK"))  %>% st_as_sf(crs = 4326, coords = c("lon", "lat"))
+  # 
+  # mapview(teste_centroid) + mapview(snap)
+  # detailed <- r5r::detailed_itineraries(r5r_core, origins = teste_centroid_origin, destinations = teste_centroid_dest,
+  #                                       mode = c("WALK", "TRANSIT"),
+  #                                       max_trip_duration = 200)
+  
   
   # Filtrar apenas colunas com info demograficas na origem
   hex_orig <- hexagonos_sf %>% dplyr::select(id_hex, 
