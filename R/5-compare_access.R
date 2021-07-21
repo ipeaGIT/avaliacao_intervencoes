@@ -110,6 +110,21 @@ compare_access <- function(sigla_muni) {
     
     go %>%
       filter(dif_rel >= 0.02) %>%
+      pull(dif_abs) %>% mean()
+    
+    go %>%
+      filter(dif_rel >= 0.02) %>%
+      pull(dif_rel) %>% mean()
+    
+    hex_ben2 <- go %>%
+      filter(dif_rel >= 0.02) %>% pull(origin)
+    
+    a <- unique(c(hex_ben1, hex_ben2))
+    
+    go %>% filter(origin %in% a) %>% pull(pop_total) %>% sum()
+    
+    %>%
+      
       pull(pop_total) %>% sum()
     
     library(ggtext)
@@ -324,7 +339,7 @@ compare_access <- function(sigla_muni) {
       theme_ipsum_rc(grid = "X", base_family = 'Helvetica')+
       guides(color=guide_legend(nrow=1)) +
       labs(y = "Ganho absoluto de acess.", x = "",
-           subtitle = sprintf("**Palma Ratio**: %s", round(subset(acess_palma, tipo_indicador == "dif_abs")$palma_ratio, 2)))+
+           subtitle = sprintf("**Razão de Palma**: %s", round(subset(acess_palma, tipo_indicador == "dif_abs")$palma_ratio, 2)))+
       coord_cartesian(ylim = c(NA, valor_trunc_abs)) +
       theme( 
         panel.grid.minor = element_blank()
@@ -351,7 +366,7 @@ compare_access <- function(sigla_muni) {
       theme_ipsum_rc(grid = "X", base_family = 'Helvetica')+
       guides(color=guide_legend(nrow=1)) +
       labs(y = "Ganho relativo de acess.", x = "",
-           subtitle = sprintf("**Palma Ratio**: %s", round(subset(acess_palma, tipo_indicador == "dif_rel")$palma_ratio, 2)))+
+           subtitle = sprintf("**Razão de palma**: %s", round(subset(acess_palma, tipo_indicador == "dif_rel")$palma_ratio, 2)))+
       coord_cartesian(ylim = c(NA, valor_trunc_rel)) +
       theme( 
         panel.grid.minor = element_blank()
