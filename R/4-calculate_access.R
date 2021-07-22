@@ -7,7 +7,7 @@ library(readr)
 
 
 
-calcular_acess_muni <- function(sigla_muni) {
+calcular_acess_muni <- function(sigla_muni, modo_acesso) {
   
   
   # status message
@@ -16,8 +16,8 @@ calcular_acess_muni <- function(sigla_muni) {
   # 1) Abrir tttmatrix ---------------------------------------------------
   
   
-  ttmatrix_median <- read_rds(sprintf("../../data/avaliacao_intervencoes/ttmatrix/ttmatrix_%s.rds",
-                                      sigla_muni))
+  ttmatrix_median <- read_rds(sprintf("../../data/avaliacao_intervencoes/ttmatrix/ttmatrix_%s_%s.rds",
+                                      sigla_muni, modo_acesso))
   
   
   
@@ -206,6 +206,9 @@ calcular_acess_muni <- function(sigla_muni) {
   # juntar
   acess_cma <- rbind(acess_cma_a, acess_cma_d)
   
+  # identificar modo
+  acess_cma[, modo_acesso := modo_acesso]
+  
   
   
   
@@ -222,8 +225,13 @@ calcular_acess_muni <- function(sigla_muni) {
   
   # 8) Salvar output --------------------------------------
   
-  path_out <- sprintf("../../data/avaliacao_intervencoes/output_access/acess_%s.rds", sigla_muni)
+  path_out <- sprintf("../../data/avaliacao_intervencoes/output_access/acess_%s_%s.rds", sigla_muni, tolower(modo_acesso))
   write_rds(acess_sf, path_out)
   
   
 }
+
+
+
+calcular_acess_muni("for", "WALK")
+calcular_acess_muni("for", "BICYCLE")

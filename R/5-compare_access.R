@@ -21,7 +21,7 @@ theme_mapa <- function(base_size) {
 }
 
 
-compare_access <- function(sigla_muni) {
+compare_access <- function(sigla_muni, modo_acesso) {
   
   city_code <- munis_list$munis_df[abrev_muni == sigla_muni]$code_muni
   
@@ -56,7 +56,7 @@ compare_access <- function(sigla_muni) {
   
   
   # abrir access
-  access <- read_rds(sprintf("../../data/avaliacao_intervencoes/output_access/acess_%s.rds", sigla_muni))
+  access <- read_rds(sprintf("../../data/avaliacao_intervencoes/output_access/acess_%s_%s.rds", sigla_muni, modo_acesso))
   
   
   # compare each indicator
@@ -94,6 +94,7 @@ compare_access <- function(sigla_muni) {
   
   # variaveiss <- "CMATT60"
   # variaveiss <- "CMAET60"
+  # variaveiss <- "CMASM60"
   
   fazer_plots_acess_comp <- function(variaveiss) {
     
@@ -108,24 +109,24 @@ compare_access <- function(sigla_muni) {
     #        dif_rel = ifelse(dif_rel < 0, 0, dif_rel))
     
     
-    go %>%
-      filter(dif_rel >= 0.02) %>%
-      pull(dif_abs) %>% mean()
-    
-    go %>%
-      filter(dif_rel >= 0.02) %>%
-      pull(dif_rel) %>% mean()
-    
-    hex_ben2 <- go %>%
-      filter(dif_rel >= 0.02) %>% pull(origin)
-    
-    a <- unique(c(hex_ben1, hex_ben2))
-    
-    go %>% filter(origin %in% a) %>% pull(pop_total) %>% sum()
-    
-    %>%
-      
-      pull(pop_total) %>% sum()
+    # go %>%
+    #   filter(dif_rel >= 0.02) %>%
+    #   pull(dif_abs) %>% mean()
+    # 
+    # go %>%
+    #   filter(dif_rel >= 0.02) %>%
+    #   pull(dif_rel) %>% mean()
+    # 
+    # hex_ben2 <- go %>%
+    #   filter(dif_rel >= 0.02) %>% pull(origin)
+    # 
+    # a <- unique(c(hex_ben1, hex_ben2))
+    # 
+    # go %>% filter(origin %in% a) %>% pull(pop_total) %>% sum()
+    # 
+    # %>%
+    #   
+    #   pull(pop_total) %>% sum()
     
     library(ggtext)
     
@@ -263,7 +264,7 @@ compare_access <- function(sigla_muni) {
             legend.key.width = unit(0.8, "cm"))
     
     # out
-    filename <- sprintf("figures/%s/access_conditions/map1_conditions_%s_%s", sigla_muni, sigla_muni, variaveiss)
+    filename <- sprintf("figures/%s/access_conditions/map1_conditions_%s_%s_%s", sigla_muni, sigla_muni, modo_acesso, variaveiss)
     ggsave(plot = plot_conditions, filename = paste0(filename, ".png"),
            height = 10, width = 16,
            # height = 14, width = 16,
@@ -282,7 +283,7 @@ compare_access <- function(sigla_muni) {
             legend.key.width = unit(0.8, "cm"))
    
      # out
-    filename <- sprintf("figures/%s/access_comparison/map2_comparison_%s_%s", sigla_muni, sigla_muni, variaveiss)
+    filename <- sprintf("figures/%s/access_comparison/map2_comparison_%s_%s_%s", sigla_muni, sigla_muni, modo_acesso, variaveiss)
     ggsave(plot = plot_comparison, filename = paste0(filename, ".png"),
            height = 10, width = 16,
            # height = 14, width = 16,
@@ -397,8 +398,8 @@ compare_access <- function(sigla_muni) {
     
     
     ggsave(plot = boxplot_inequalities1, 
-           filename = sprintf("figures/%s/access_inequalities/fig1_ineq1_%s_%s.png", 
-                              sigla_muni, sigla_muni, variaveiss), 
+           filename = sprintf("figures/%s/access_inequalities/fig1_ineq1_%s_%s_%s.png", 
+                              sigla_muni, sigla_muni, modo_acesso, variaveiss), 
            height = 10, width = 16, units = "cm", device = "png")
 
       
@@ -489,8 +490,8 @@ compare_access <- function(sigla_muni) {
     
   }
   
-  variaveis <- grep(pattern = "TT|ET|EI|EF|EM|ST|SB|SM|SA", x = colnames(access), value = TRUE)
-  variaveis <- c("CMATT60", "CMAET60")
+  # variaveis <- grep(pattern = "TT|ET|EI|EF|EM|ST|SB|SM|SA", x = colnames(access), value = TRUE)
+  variaveis <- c("CMATT60", "CMAET60", "CMASB60", "CMASM60")
   
   lapply(variaveis, fazer_plots_acess_comp)
   
@@ -503,5 +504,6 @@ compare_access <- function(sigla_muni) {
 
 
 # apply function
-compare_access('for')
+compare_access('for', "WALK")
+compare_access('for', "BICYCLE")
 
