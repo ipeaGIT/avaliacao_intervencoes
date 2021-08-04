@@ -1,5 +1,6 @@
 
 source("../acesso_oport/R/fun/setup.R")
+library(ggnewscale)
 
 theme_mapa <- function(base_size) {
   
@@ -132,149 +133,70 @@ compare_access <- function(sigla_muni, modo_acesso) {
     
     # abrir tiles
     # abrir tiles
-    map_tiles <- read_rds(sprintf("../data/maptiles_crop/2019/mapbox/maptile_crop_mapbox_%s_2019.rds", sigla_muni))
+    map_tiles <- read_rds(sprintf("../../data/acesso_oport/maptiles_crop/2019/mapbox/maptile_crop_mapbox_%s_2019.rds", sigla_muni))
+    
+    
+    # transform map elements to UTM
+    linhas_shape_map <- st_transform(linhas_shape, 3857)
+    city_shape_map <- st_transform(city_shape, 3857)
+    go_map <- st_transform(go, 3857)
+    
+    # create fun
+    create_map_acess <- function(var) {
+      
+      ggplot()+
+        geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
+        coord_equal() +
+        scale_fill_identity()+
+        # nova escala
+        new_scale_fill() +
+        geom_sf(data = go_map, aes(fill = {{ var }} ), color = NA)+
+        geom_sf(data = linhas_shape_map, size = 0.5, alpha = 0.7)+
+        # geom_sf(data = linhas_shape, aes(color = route_long_name1), size = 0.5, alpha = 0.7)+
+        geom_sf(data= city_shape_map, fill = NA)+
+        theme_mapa()
+    }
+    
+    
+    
     
     # map with access antes
-    map1 <- ggplot()+
-      geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
-      coord_equal() +
-      scale_fill_identity()+
-      # nova escala
-      new_scale_fill() +
-      geom_sf(data = go, aes(fill = antes), color = NA)+
-      geom_sf(data = linhas_shape, size = 0.5, alpha = 0.7)+
-      # geom_sf(data = linhas_shape, aes(color = route_long_name1), size = 0.5, alpha = 0.7)+
-      geom_sf(data= city_shape, fill = NA)+
+    map1 <- create_map_acess(antes) +
       scale_fill_viridis_c(labels = labelss, option = "inferno")+
-      # scale_fill_distiller(palette = "PuBu", direction = 1
-      #                      # limits = c(-1,1)*max(abs(go$dif1))
-      #                      # breaks = c(-30000, 0, 30000),
-      #                      # labels = c("-30 mil", 0, "30 mil")
-      # )+
-      # scale_color_manual(values=c("gray15", "grey30", "grey40", 'grey50'), 
-      #                    labels=c("Metro Linha Leste", "Linha Oeste", "Linha Sul", "VLT Parangaba Papicu")) +
-      theme_mapa()+
-      labs(
-        title = "Acessibilidade TP ***antes***",
-        # title = "Acessibilidade TP antes da intervencao",
-        # subtitle = variaveiss,
-        fill = "",
-        color = "") +
-      theme(legend.box = "vertical", legend.margin = margin())
+      labs(title = "Acessibilidade TP ***antes***",
+           # subtitle = variaveiss,
+           fill = "")
     
-    # map with access antes
-    map2 <- ggplot()+
-      geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
-      coord_equal() +
-      scale_fill_identity()+
-      # nova escala
-      new_scale_fill() +
-      geom_sf(data = go, aes(fill = depois), color = NA)+
-      geom_sf(data = linhas_shape, size = 0.3, alpha = 0.7)+
-      geom_sf(data= city_shape, fill = NA)+
+    # map with acess depois
+    map2 <- create_map_acess(depois)+
       scale_fill_viridis_c(labels = labelss, option = "inferno")+
-      # scale_fill_distiller(palette = "PuBu", direction = 1
-      #                      # limits = c(-1,1)*max(abs(go$dif1))
-      #                      # breaks = c(-30000, 0, 30000),
-      #                      # labels = c("-30 mil", 0, "30 mil")
-      # )+
-      theme_mapa()+
       labs(title = "Acessibilidade TP ***depois***",
            # subtitle = variaveiss,
            fill = "")
-      
-    # diferenca absoluta
-    map3 <- ggplot()+
-      geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
-      coord_equal() +
-      scale_fill_identity()+
-      # nova escala
-      new_scale_fill() +
-      geom_sf(data = go, aes(fill = dif_abs), color = NA)+
-      geom_sf(data = linhas_shape, size = 0.3, alpha = 0.7)+
-      geom_sf(data= city_shape, fill = NA)+
-      # scale_fill_viridis_c(labels = labelss, option = "inferno")+
+    
+    map3 <- create_map_acess(dif_abs)+
       scale_fill_distiller(palette = "PuBu", direction = 1, labels = labelss
                            # limits = c(-1,1)*max(abs(go$dif1))
                            # breaks = c(-30000, 0, 30000),
                            # labels = c("-30 mil", 0, "30 mil")
       )+
-      theme_mapa()+
       labs(title = "Diferença ***absoluta***",
            # subtitle = variaveiss,
            fill = "")
     
-    # plot1 <- ggplot()+
-    #   geom_boxplot(data = go, aes(x = 1, y = dif_abs), outlier.size = 0.5) +
-    #   # coord_flip()+
-    #   theme_ipsum_rc(grid = "X", base_family = 'Helvetica')+    
-    #   theme(axis.text.y = element_blank(),
-    #         axis.title.x = element_blank(),
-    #         axis.title.y = element_blank(),
-    #         axis.text.x = element_text(size = 5))
-    
-    # ggplot()+
-    #   geom_point(data = go, aes(x = depois, y = antes, color = as.factor(quintil)), size = 2)+
-    #   scale_color_brewer(palette = "RdBu")
-    # # coord_flip()+
-    # theme_ipsum_rc(grid = "X", base_family = 'Helvetica')+
-    #   theme(axis.text.y = element_blank(),
-    #         axis.title.x = element_blank(),
-    #         axis.title.y = element_blank(),
-    #         axis.text.x = element_text(size = 5))
-    
-    # diferenca relativa
-    map4 <- ggplot()+
-      geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
-      coord_equal() +
-      scale_fill_identity()+
-      # nova escala
-      new_scale_fill() +
-      geom_sf(data = go, aes(fill = dif_rel), color = NA)+
-      geom_sf(data = linhas_shape, size = 0.3, alpha = 0.7)+
-      geom_sf(data= city_shape, fill = NA)+
-      # scale_fill_viridis_c(option = "inferno", label = label_percent(accuracy = 1))+
+    map4 <- create_map_acess(dif_abs)+
       scale_fill_distiller(palette = "PuBu", direction = 1
                            # limits = c(-1,1)*max(abs(go$dif1))
                            # breaks = c(-30000, 0, 30000),
                            # labels = c("-30 mil", 0, "30 mil")
                            , label = label_percent(accuracy = 1)
       )+
-      theme_mapa()+
       labs(title = "Diferença ***relativa***",
            # subtitle = variaveiss,
            fill = "")
     
-    # plot1 <- ggplot()+
-    #   geom_boxplot(data = go, aes(x = 1, y = dif_abs), outlier.size = 0.5) +
-    #   # coord_flip()+
-    #   theme_ipsum_rc(grid = "X", base_family = 'Helvetica')+    
-    #   theme(axis.text.y = element_blank(),
-    #         axis.title.x = element_blank(),
-    #         axis.title.y = element_blank(),
-    #         axis.text.x = element_text(size = 5))
     
-    
-    # arrange layout
-    # plot <- 
-    #   # map2 + map3 + map4 &
-    #   # (map1 | map2) / (map3 |map4) +
-    #   (map1 | map2 | map3 |map4) +
-    #   # plot_layout(nrow = 2) & 
-    #   # plot_layout(nrow = 2, heights = c(3, 1)) & 
-    #   plot_layout(heights = c(1, 1)) &
-    #   theme(plot.title = element_markdown(size = 7),
-    #         plot.subtitle = element_text(size = 6),
-    #         legend.text = element_text(size = 5))
-    # 
-    # # out
-    # filename <- sprintf("figures/%s/access_comparison/fig1_mapdif_%s_%s", sigla_muni, sigla_muni, variaveiss)
-    # ggsave(plot = plot, filename = paste0(filename, ".png"), 
-    #        height = 6, width = 16,
-    #        # height = 14, width = 16,
-    #        units = "cm", device = "png", dpi = 300)
-    
-    
+    # arrange plot
     plot_conditions <- 
       # map2 + map3 + map4 &
       # (map1 | map2) / (map3 |map4) +
@@ -282,6 +204,7 @@ compare_access <- function(sigla_muni, modo_acesso) {
       # plot_layout(nrow = 2) & 
       # plot_layout(nrow = 2, heights = c(3, 1)) & 
       plot_layout(heights = c(1, 1)) &
+      theme_mapa() +
       theme(plot.title = element_markdown(size = 9),
             plot.subtitle = element_text(size = 6),
             legend.text = element_text(size = 7),
@@ -305,8 +228,8 @@ compare_access <- function(sigla_muni, modo_acesso) {
             plot.subtitle = element_text(size = 6),
             legend.text = element_text(size = 7),
             legend.key.width = unit(0.8, "cm"))
-   
-     # out
+    
+    # out
     filename <- sprintf("figures/%s/access_comparison/map2_comparison_%s_%s_%s", sigla_muni, sigla_muni, modo_acesso, variaveiss)
     ggsave(plot = plot_comparison, filename = paste0(filename, ".png"),
            height = 10, width = 16,
@@ -425,8 +348,8 @@ compare_access <- function(sigla_muni, modo_acesso) {
            filename = sprintf("figures/%s/access_inequalities/fig1_ineq1_%s_%s_%s.png", 
                               sigla_muni, sigla_muni, modo_acesso, variaveiss), 
            height = 10, width = 16, units = "cm", device = "png")
-
-      
+    
+    
     
     # 
     # # 2) access inequalities boxplot 2
