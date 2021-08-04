@@ -130,8 +130,17 @@ compare_access <- function(sigla_muni, modo_acesso) {
     
     library(ggtext)
     
+    # abrir tiles
+    # abrir tiles
+    map_tiles <- read_rds(sprintf("../data/maptiles_crop/2019/mapbox/maptile_crop_mapbox_%s_2019.rds", sigla_muni))
+    
     # map with access antes
     map1 <- ggplot()+
+      geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
+      coord_equal() +
+      scale_fill_identity()+
+      # nova escala
+      new_scale_fill() +
       geom_sf(data = go, aes(fill = antes), color = NA)+
       geom_sf(data = linhas_shape, size = 0.5, alpha = 0.7)+
       # geom_sf(data = linhas_shape, aes(color = route_long_name1), size = 0.5, alpha = 0.7)+
@@ -155,6 +164,11 @@ compare_access <- function(sigla_muni, modo_acesso) {
     
     # map with access antes
     map2 <- ggplot()+
+      geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
+      coord_equal() +
+      scale_fill_identity()+
+      # nova escala
+      new_scale_fill() +
       geom_sf(data = go, aes(fill = depois), color = NA)+
       geom_sf(data = linhas_shape, size = 0.3, alpha = 0.7)+
       geom_sf(data= city_shape, fill = NA)+
@@ -171,6 +185,11 @@ compare_access <- function(sigla_muni, modo_acesso) {
       
     # diferenca absoluta
     map3 <- ggplot()+
+      geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
+      coord_equal() +
+      scale_fill_identity()+
+      # nova escala
+      new_scale_fill() +
       geom_sf(data = go, aes(fill = dif_abs), color = NA)+
       geom_sf(data = linhas_shape, size = 0.3, alpha = 0.7)+
       geom_sf(data= city_shape, fill = NA)+
@@ -206,6 +225,11 @@ compare_access <- function(sigla_muni, modo_acesso) {
     
     # diferenca relativa
     map4 <- ggplot()+
+      geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
+      coord_equal() +
+      scale_fill_identity()+
+      # nova escala
+      new_scale_fill() +
       geom_sf(data = go, aes(fill = dif_rel), color = NA)+
       geom_sf(data = linhas_shape, size = 0.3, alpha = 0.7)+
       geom_sf(data= city_shape, fill = NA)+
@@ -491,7 +515,7 @@ compare_access <- function(sigla_muni, modo_acesso) {
   }
   
   # variaveis <- grep(pattern = "TT|ET|EI|EF|EM|ST|SB|SM|SA", x = colnames(access), value = TRUE)
-  variaveis <- c("CMATT60", "CMAET60", "CMASB60", "CMASM60")
+  variaveis <- c("CMATT60", "CMAET60", "CMASB60", "CMASM60", "CMAEI60", "CMAEF60", "CMAEM60")
   
   lapply(variaveis, fazer_plots_acess_comp)
   
