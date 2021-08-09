@@ -1,4 +1,11 @@
-
+# headways_df <- headways_df
+# ttime_df <- ttime_df
+# stops_df <- stops_df
+# routes_df <- routes_df
+# line_shape <- line_shape_routes
+# agency_id = "guess"
+# service_id = c("weekdays", "weekends")
+# stops_crs = 4326
 
 
 
@@ -22,7 +29,12 @@ create_merge_gtfs <- function(gtfs,
   if (service_id == "weekdays") {
     
     # filter only weekdays
-    service_id1 <- gtfs_original$calendar[monday == 1 & tuesday == 1 & wednesday == 1 & thursday == 1 & friday == 1]$service_id
+    service_id1 <- gtfs_original$calendar[monday == 1 & tuesday == 1 & wednesday == 1 & thursday == 1 & friday == 1]
+    
+    # get service with most date intervals
+    service_id1[, interval := paste0(start_date, "-", end_date)]
+    service_id1[, .N, by = interval]
+    setorder(service_id1, -N)
     
     if (length(service_id1) == 0) {
       
@@ -101,11 +113,11 @@ create_merge_gtfs <- function(gtfs,
   # create temporary df with the trips based on its start hour of frequencies
   df <- data.table(
     # trip_id = rep(headways_df$trip_id, headways_df$n_trips),
-    route_id = rep(headways_df$route_id, headways_df$n_trips),
+    route_id     = rep(headways_df$route_id,     headways_df$n_trips),
     direction_id = rep(headways_df$direction_id, headways_df$n_trips),
-    start_trip = rep(headways_df$start_trip, headways_df$n_trips),
-    headway = rep(headways_df$headway * 60, headways_df$n_trips),
-    service = rep(headways_df$service, headways_df$n_trips)
+    start_trip   = rep(headways_df$start_trip,   headways_df$n_trips),
+    headway      = rep(headways_df$headway * 60, headways_df$n_trips),
+    service      = rep(headways_df$service,      headways_df$n_trips)
     )
   
   # tag each interval, which are the trips with unique headways
@@ -172,10 +184,9 @@ create_merge_gtfs <- function(gtfs,
   
   
   
-  # generate new shapes -------------------------------------------------------------------------
   
   # columns: shape_id, shape_pt_lat, shape_pt_lon, shape_pt_sequence, shape_dist_traveled
-  # source("R/teste_linha_leste_shapes.R")
+  # source("R/fun/teste_linha_leste_shapes.R")
   shapes <- line_to_shapes(line_shape)
   
   
@@ -206,10 +217,11 @@ create_merge_gtfs <- function(gtfs,
   
   # if the user desires an agency_id, it will select it. otherwise, it will get the first agency_id that
   # is located in the agency file
-  if (agency_id == "guess") agency_id1 <- unique(gtfs_original$agency$agency_id)[1] else agency_id1 <- agency_id
+  # if (agency_id == "guess") agency_id1 <- unique(gtfs_original$agency$agency_id)[1] else agency_id1 <- agency_id
   
   # identify agency_id
-  routes <- routes_df[, agency_id := agency_id1]
+  # routes <- routes_df[, agency_id := agency_id1]
+  routes <- routes_df
   
   
   

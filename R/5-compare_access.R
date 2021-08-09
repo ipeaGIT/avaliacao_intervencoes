@@ -184,7 +184,7 @@ compare_access <- function(sigla_muni, modo_acesso) {
            # subtitle = variaveiss,
            fill = "")
     
-    map4 <- create_map_acess(dif_abs)+
+    map4 <- create_map_acess(dif_rel)+
       scale_fill_distiller(palette = "PuBu", direction = 1
                            # limits = c(-1,1)*max(abs(go$dif1))
                            # breaks = c(-30000, 0, 30000),
@@ -224,6 +224,7 @@ compare_access <- function(sigla_muni, modo_acesso) {
       # plot_layout(nrow = 2) & 
       # plot_layout(nrow = 2, heights = c(3, 1)) & 
       plot_layout(heights = c(1, 1)) &
+      theme_mapa() +
       theme(plot.title = element_markdown(size = 9),
             plot.subtitle = element_text(size = 6),
             legend.text = element_text(size = 7),
@@ -243,6 +244,7 @@ compare_access <- function(sigla_muni, modo_acesso) {
     
     # 1) access inequalities boxplot 1
     go_long <- go %>%
+      st_set_geometry(NULL) %>%
       pivot_longer(cols = dif_abs:dif_rel,
                    names_to = "tipo_indicador",
                    values_to = "valor_indicador"
