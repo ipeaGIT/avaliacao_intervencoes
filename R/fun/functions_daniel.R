@@ -1,4 +1,4 @@
-bike_ttm <- function(graph, points_path) {
+bike_ttm <- function(scenario, graph, points_path) {
   
   r5r_core <- setup_r5(graph, use_elevation = TRUE)
   
@@ -22,12 +22,23 @@ bike_ttm <- function(graph, points_path) {
     verbose = FALSE
   )
   
-  return(ttm)
+  # save object and return path
+  
+  dir_path <- file.path(
+    "../../data/avaliacao_intervencoes/for/ttmatrix",
+    scenario
+  )
+  if (!dir.exists(dir_path)) dir.create(dir_path)
+  
+  file_path <- file.path(dir_path, "ttmatrix_bike.rds")
+  saveRDS(ttm, file_path)
+  
+  return(file_path)
   
 }
 
 
-transit_ttm <- function(graph, points_path) {
+transit_ttm <- function(scenario, graph, points_path) {
   
   r5r_core <- setup_r5(graph, use_elevation = TRUE)
   
@@ -47,7 +58,18 @@ transit_ttm <- function(graph, points_path) {
     verbose = FALSE
   )
   
-  return(ttm)
+  # save object and return path
+  
+  dir_path <- file.path(
+    "../../data/avaliacao_intervencoes/for/ttmatrix",
+    scenario
+  )
+  if (!dir.exists(dir_path)) dir.create(dir_path)
+  
+  file_path <- file.path(dir_path, "ttmatrix_transit.rds")
+  saveRDS(ttm, file_path)
+  
+  return(file_path)
   
 }
 
@@ -55,7 +77,7 @@ transit_ttm <- function(graph, points_path) {
 # milha de bicicleta?
 # Outra: provavelmente teria que usar o bike_parks_path antes e depois porque as
 # novas estações vão ter bicicletários
-bfm_ttm <- function(graph, points_path, bike_parks_path) {
+bfm_ttm <- function(scenario, graph, points_path, bike_parks_path) {
   
   r5r_core <- setup_r5(graph, use_elevation = TRUE)
   
@@ -116,15 +138,31 @@ bfm_ttm <- function(graph, points_path, bike_parks_path) {
     ttm[, .I[travel_time == min(travel_time)], by = .(fromId, toId)]$V1
   ]
   
-  return(ttm)
+  # save object and return path
+  
+  dir_path <- file.path(
+    "../../data/avaliacao_intervencoes/for/ttmatrix",
+    scenario
+  )
+  if (!dir.exists(dir_path)) dir.create(dir_path)
+  
+  file_path <- file.path(dir_path, "ttmatrix_bike_first_mile.rds")
+  saveRDS(ttm, file_path)
+  
+  return(file_path)
   
 }
 
 
-join_ttms <- function(bike_matrix,
-                      transit_matrix,
-                      bfm_matrix,
+join_ttms <- function(scenario,
+                      bike_matrix_path,
+                      transit_matrix_path,
+                      bfm_matrix_path,
                       points_path) {
+  
+  bike_matrix <- readRDS(bike_matrix_path)
+  transit_matrix <- readRDS(transit_matrix_path)
+  bfm_matrix <- readRDS(bfm_matrix_path)
   
   points <- fread(points_path, select = "id_hex")
   setnames(points, "id")
@@ -135,17 +173,29 @@ join_ttms <- function(bike_matrix,
   ttm[transit_matrix, on = c("toId", "fromId"), transit_time := i.travel_time]
   ttm[bfm_matrix, on = c("toId", "fromId"), bfm_time := i.travel_time]
   
-  return(ttm)
+  # save object and return path
+  
+  dir_path <- file.path(
+    "../../data/avaliacao_intervencoes/for/ttmatrix",
+    scenario
+  )
+  if (!dir.exists(dir_path)) dir.create(dir_path)
+  
+  file_path <- file.path(dir_path, "ttmatrix_full.rds")
+  saveRDS(ttm, file_path)
+  
+  return(file_path)
   
 }
 
 
-exploratory_report <- function(ttm,
+exploratory_report <- function(ttm_path,
                                scenario,
                                bike_parks_path,
                                grid_path,
                                exploratory_skeleton) {
   
+  ttm <- readRDS(ttm_path)
   bike_parks <- fread(bike_parks_path)
   
   random_points <- data.table(
@@ -167,12 +217,13 @@ exploratory_report <- function(ttm,
   ttm <- ttm[fromId %in% relevant_ids]
   ttm[setDT(random_points), on = c(fromId = "hex_id"), hex_name := i.hex_name]
   
-  # save exploratory analysis report to new folder 
+  # save exploratory analysis report to new folder
   
-  if (!dir.exists("./results")) dir.create("./results")
+  report_dir <- "../../data/avaliacao_intervencoes/for/reports"
+  if (!dir.exists(report_dir)) dir.create(report_dir)
   
   filename <- normalizePath(
-    paste0("./results/exploratory_analysis_", scenario, ".html")
+    file.path(report_dir, paste0("exploratory_analysis_", scenario, ".html"))
   )
   
   rmarkdown::render(
@@ -191,8 +242,9 @@ exploratory_report <- function(ttm,
 }
 
 
-analyse_scenarios <- function(ttms, grid_path, analysis_skeleton) {
+analyse_scenarios <- function(ttms_paths, grid_path, analysis_skeleton) {
   
+  ttms <- lapply(ttms_paths, readRDS)
   grid <- setDT(readRDS(grid_path))
   
   accessibility <- lapply(
@@ -212,10 +264,13 @@ analyse_scenarios <- function(ttms, grid_path, analysis_skeleton) {
     }
   )
   
-  # create threed different reports, one for job accessibility, the other for
+  return(accessibility)
+  
+  # create three different reports, one for job accessibility, the other for
   # education accessibility and the last for health accessibility
   
-  if (!dir.exists("./results")) dir.create("./results")
+  report_dir <- "../../data/avaliacao_intervencoes/for/reports"
+  if (!dir.exists(report_dir)) dir.create(report_dir)
   
   vapply(
     c("jobs", "health", "edu"),
@@ -223,7 +278,7 @@ analyse_scenarios <- function(ttms, grid_path, analysis_skeleton) {
     FUN = function(type) {
       
       filename <- normalizePath(
-        paste0("./results/scenario_analysis_", type, ".html")
+        file.path(report_dir, paste0("scenario_analysis_", type, ".html"))
       )
       
       # don't pass the whole accessibility dataset to the report, only relevant

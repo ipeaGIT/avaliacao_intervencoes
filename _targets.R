@@ -49,24 +49,29 @@ list(
     ),
     tar_target(
       bike_matrix,
-      bike_ttm(graph, points_path)
+      bike_ttm(scenario, graph, points_path),
+      format = "file"
     ),
     tar_target(
       transit_matrix,
-      transit_ttm(graph, points_path)
+      transit_ttm(scenario, graph, points_path),
+      format = "file"
     ),
     tar_target(
       bike_first_mile_matrix,
-      bfm_ttm(graph, points_path, bike_parks_path)
+      bfm_ttm(scenario, graph, points_path, bike_parks_path),
+      format = "file"
     ),
     tar_target(
       full_matrix,
       join_ttms(
+        scenario,
         bike_matrix,
         transit_matrix,
         bike_first_mile_matrix,
         points_path
-      )
+      ),
+      format = "file"
     ),
     tar_target(
       exploratory_analysis,
@@ -76,7 +81,8 @@ list(
         bike_parks_path,
         grid_path,
         exploratory_skeleton
-      )
+      ),
+      format = "file"
     )
   ),
   tar_target(
@@ -85,6 +91,7 @@ list(
       list(full_matrix_antes, full_matrix_depois),
       grid_path,
       analysis_skeleton
-    )
+    ),
+    format = "file"
   )
 )
