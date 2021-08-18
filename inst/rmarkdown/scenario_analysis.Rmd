@@ -1,0 +1,122 @@
+---
+output: html_document
+params:
+  access: NA
+  grid: NA
+  type: NA
+title: "Before and after comparison"
+---
+
+```{r, include = FALSE, message = FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE
+)
+library(ggplot2)
+library(data.table)
+library(sf)
+library(cowplot)
+```
+
+```{r, setup}
+access <- params$access
+names(access) <- c("antes", "depois")
+access <- rbindlist(access, idcol = "scenario")
+
+# bring geometry to be able to create maps
+access[
+  grid,
+  on = c(id = "id_hex"),
+  `:=`(
+    geometry = i.geometry,
+    decil = i.decil
+  )
+]
+#access <- access[!st_is_empty(geometry)]
+
+# calculate difference between before and after scenarios
+diff <- dcast(
+  access,
+  formula = id ~ scenario,
+  value.var = c("all_modes", "transit_bike", "only_transit"),
+  drop = FALSE
+)
+diff[
+  ,
+  `:=`(
+    all_modes_diff = all_modes_depois - all_modes_antes,
+    transit_bike_diff = transit_bike_depois - transit_bike_antes,
+    only_transit_diff = only_transit_depois - only_transit_antes
+  )
+]
+diff[access, on = "id", `:=`(decil = i.decil, geometry = i.geometry)]
+diff[grid, on = c(id = "id_hex"), pop := i.pop_total]
+
+# function that generate plots for each variable
+create_plot <- function(var) {
+  
+  var_diff <- paste0(var, "_diff")
+  
+  ma <- ggplot(st_as_sf(access)) +
+  geom_sf(aes_string(fill = var), color = NA) +
+  facet_wrap(~ scenario) +
+  scale_fill_viridis_c(option = "inferno")
+
+  md <- ggplot(st_as_sf(diff)) +
+    geom_sf(aes_string(fill = var_diff), color = NA) +
+    scale_fill_gradient(low = "white", high = "red")
+  
+  richest_10 <- diff[decil == 10]
+  poorest_40 <- diff[decil >= 1 & decil <= 4]
+  
+  palma <- weighted.mean(richest_10[[var_diff]], w = richest_10$pop) /
+    weighted.mean(poorest_40[[var_diff]], w = poorest_40$pop)
+  palma <- format(palma, digits = 4)
+  
+  y_ceiling <- fcase(
+    type == "jobs", 20000,
+    type == "edu", 10,
+    type == "health", 10
+  )
+  
+  bd <- ggplot(diff) +
+    geom_boxplot(
+      aes_string(as.factor(diff$decil), var_diff),
+      outlier.alpha = 0.25
+    ) +
+    ggtitle(paste0("Palma ratio: ", palma)) +
+    ylim(0, y_ceiling)
+  
+  final_plot <- plot_grid(
+    ma,
+    plot_grid(md, bd, ncol = 2, rel_widths = c(0.7, 0.3)),
+    nrow = 2
+  )
+  
+  return(final_plot)
+  
+}
+```
+
+## Only transit - 60 min
+
+```{r, warning = FALSE}
+suppressWarnings(
+  print(create_plot("only_transit"))
+)
+```
+
+## Transit + bike
+
+```{r, warning = FALSE}
+suppressWarnings(
+  print(create_plot("transit_bike"))
+)
+```
+
+## Transit + bike + bike first mile to selected stations
+
+```{r, warning = FALSE}
+suppressWarnings(
+  print(create_plot("all_modes"))
+)
+```
