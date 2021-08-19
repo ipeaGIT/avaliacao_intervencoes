@@ -83,12 +83,27 @@ list(
         exploratory_skeleton
       ),
       format = "file"
+    ),
+    tar_target(
+      accessibility,
+      calculate_accessibility(
+        scenario,
+        full_matrix,
+        grid_path
+      ),
+      format = "file"
     )
+  ),
+  tar_target(
+    accessibility_diff,
+    calculate_access_diff(c(accessibility_antes, accessibility_depois)),
+    format = "file"
   ),
   tar_target(
     scenario_analysis,
     analyse_scenarios(
-      list(full_matrix_antes, full_matrix_depois),
+      list(accessibility_antes, accessibility_depois),
+      accessibility_diff,
       grid_path,
       analysis_skeleton
     ),

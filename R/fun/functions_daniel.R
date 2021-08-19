@@ -17,7 +17,7 @@ bike_ttm <- function(scenario, graph, points_path) {
     time_window = 120L,
     max_trip_duration = bike_max_distance / bike_speed * 60,
     bike_speed = bike_speed,
-    max_lts = 3,
+    max_lts = 2,
     n_threads = getOption("R5R_THREADS"),
     verbose = FALSE
   )
@@ -37,7 +37,9 @@ bike_ttm <- function(scenario, graph, points_path) {
   
 }
 
-
+# scenario <- "antes"
+# graph <- tar_read(graph_antes)
+# points_path <- tar_read(points_path)
 transit_ttm <- function(scenario, graph, points_path) {
   
   r5r_core <- setup_r5(graph, use_elevation = TRUE)
@@ -53,7 +55,7 @@ transit_ttm <- function(scenario, graph, points_path) {
     departure_datetime = as.POSIXct("02-03-2020 06:00:00", format = "%d-%m-%Y %H:%M:%S"),
     time_window = 120L,
     max_trip_duration = 180L,
-    max_walk_dist = 3000,
+    max_walk_dist = 1000,
     n_threads = getOption("R5R_THREADS"),
     verbose = FALSE
   )
@@ -77,6 +79,11 @@ transit_ttm <- function(scenario, graph, points_path) {
 # milha de bicicleta?
 # Outra: provavelmente teria que usar o bike_parks_path antes e depois porque as
 # novas estações vão ter bicicletários
+#
+# scenario <- "antes"
+# graph <- tar_read(graph_antes)
+# points_path <- tar_read(points_path)
+# bike_parks_path <- tar_read(bike_parks_path)
 bfm_ttm <- function(scenario, graph, points_path, bike_parks_path) {
   
   r5r_core <- setup_r5(graph, use_elevation = TRUE)
@@ -97,7 +104,7 @@ bfm_ttm <- function(scenario, graph, points_path, bike_parks_path) {
     time_window = 120L,
     max_trip_duration = bike_max_distance / bike_speed * 60,
     bike_speed = bike_speed,
-    max_lts = 3,
+    max_lts = 2,
     n_threads = getOption("R5R_THREADS"),
     verbose = FALSE
   )
@@ -110,7 +117,7 @@ bfm_ttm <- function(scenario, graph, points_path, bike_parks_path) {
     departure_datetime = as.POSIXct("02-03-2020 06:00:00", format = "%d-%m-%Y %H:%M:%S"),
     time_window = 120L,
     max_trip_duration = 180L,
-    max_walk_dist = 1500,
+    max_walk_dist = 1000,
     n_threads = getOption("R5R_THREADS"),
     verbose = FALSE
   )
@@ -154,6 +161,11 @@ bfm_ttm <- function(scenario, graph, points_path, bike_parks_path) {
 }
 
 
+# scenario <- "antes"
+# bike_matrix_path <- tar_read(bike_matrix_antes)
+# transit_matrix_path <- tar_read(transit_matrix_antes)
+# bfm_matrix_path <- tar_read(bike_first_mile_matrix_antes)
+# points_path <- tar_read(points_path)
 join_ttms <- function(scenario,
                       bike_matrix_path,
                       transit_matrix_path,
@@ -189,6 +201,11 @@ join_ttms <- function(scenario,
 }
 
 
+# ttm_path <- tar_read(full_matrix_antes)
+# scenario <- "antes"
+# bike_parks_path <- tar_read(bike_parks_path)
+# grid_path <- tar_read(grid_path)
+# exploratory_skeleton <- tar_read(exploratory_skeleton)
 exploratory_report <- function(ttm_path,
                                scenario,
                                bike_parks_path,
@@ -242,77 +259,31 @@ exploratory_report <- function(ttm_path,
 }
 
 
-analyse_scenarios <- function(ttms_paths, grid_path, analysis_skeleton) {
+# scenario <- "antes"
+# ttm_path <- tar_read(full_matrix_antes)
+# grid_path <- tar_read(grid_path)
+# opportunities = c("total_jobs", "total_edu", "basic_health")
+calculate_accessibility <- function(scenario,
+                                    ttm_path,
+                                    grid_path,
+                                    opportunities = c(
+                                      "total_jobs",
+                                      "total_edu",
+                                      "basic_health"
+                                    )) {
   
-  ttms <- lapply(ttms_paths, readRDS)
+  ttm <- readRDS(ttm_path)
   grid <- setDT(readRDS(grid_path))
   
-  accessibility <- lapply(
-    ttms,
-    function(dt) {
-      dt <- dt[
-        grid,
-        on = c(toId = "id_hex"),
-        `:=`(
-          total_jobs = i.empregos_total,
-          total_edu = i.edu_total,
-          basic_health = i.saude_baixa
-        )
-      ]
-      
-      calculate_accessibility(dt, c("total_jobs", "total_edu", "basic_health"))
-    }
-  )
-  
-  return(accessibility)
-  
-  # create three different reports, one for job accessibility, the other for
-  # education accessibility and the last for health accessibility
-  
-  report_dir <- "../../data/avaliacao_intervencoes/for/reports"
-  if (!dir.exists(report_dir)) dir.create(report_dir)
-  
-  vapply(
-    c("jobs", "health", "edu"),
-    FUN.VALUE = character(1),
-    FUN = function(type) {
-      
-      filename <- normalizePath(
-        file.path(report_dir, paste0("scenario_analysis_", type, ".html"))
-      )
-      
-      # don't pass the whole accessibility dataset to the report, only relevant
-      # columns
-      
-      relevant_cols <- c(
-        "fromId",
-        paste0(c("all_modes_", "transit_bike_", "only_transit_"), type)
-      )
-      smaller_accessibility <- lapply(
-        accessibility,
-        function(dt) {
-          dt <- dt[, ..relevant_cols]
-          dt <- setnames(dt, c("id", "all_modes", "transit_bike", "only_transit"))
-        }
-      )
-      
-      rmarkdown::render(
-        analysis_skeleton,
-        output_file = filename,
-        params = list(
-          access = smaller_accessibility,
-          grid = grid,
-          type = type
-        ),
-        quiet = TRUE
-      )
-      
-    }
-  )
-  
-}
-
-calculate_accessibility <- function(ttm, opportunities) {
+  ttm <- ttm[
+    grid,
+    on = c(toId = "id_hex"),
+    `:=`(
+      total_jobs = i.empregos_total,
+      total_edu = i.edu_total,
+      basic_health = i.saude_baixa
+    )
+  ]
   
   only_transit_access <- ttm[
     transit_time <= 60,
@@ -357,5 +328,128 @@ calculate_accessibility <- function(ttm, opportunities) {
       only_transit_health = i.basic_health
     )
   ]
+  
+  # save object and return path
+  
+  dir_path <- file.path("../../data/avaliacao_intervencoes/for/output_access")
+  if (!dir.exists(dir_path)) dir.create(dir_path)
+  
+  file_path <- file.path(dir_path, paste0("access_", scenario, ".rds"))
+  saveRDS(all_modes_access, file_path)
+  
+  return(file_path)
+  
+}
+
+
+# access_paths <- c(tar_read(accessibility_antes), tar_read(accessibility_depois))
+calculate_access_diff <- function(access_paths) {
+  
+  access <- lapply(access_paths, readRDS)
+  
+  # retrieve the name of the columns with accessibility data to calculate diff
+  # between the two datasets programatically
+  
+  access_cols <- setdiff(names(access[[1]]), "fromId")
+  setnames(access[[1]], old = access_cols, new = paste0(access_cols, "_antes"))
+  setnames(access[[2]], old = access_cols, new = paste0(access_cols, "_depois"))
+  
+  access_diff <- access[[1]][access[[2]], on = "fromId"]
+  
+  diff_expression <- paste0(
+    "`:=`(",
+    paste(
+      access_cols,
+      "=",
+      paste0(access_cols, "_depois"),
+      "-",
+      paste0(access_cols, "_antes"),
+      collapse = ", "
+    ),
+    ")"
+  )
+  
+  access_diff[, eval(parse(text = diff_expression))]
+  
+  cols_to_keep <- c("fromId", access_cols)
+  access_diff[, ..cols_to_keep]
+  
+  # save object and return path
+  
+  dir_path <- file.path("../../data/avaliacao_intervencoes/for/output_access")
+  if (!dir.exists(dir_path)) dir.create(dir_path)
+  
+  file_path <- file.path(dir_path, paste0("access_diff.rds"))
+  saveRDS(access_diff, file_path)
+  
+  return(file_path)
+  
+}
+
+# access_paths <- list(tar_read(accessibility_antes), tar_read(accessibility_depois))
+# access_diff_path <- tar_read(accessibility_diff)
+# grid_path <- tar_read(grid_path)
+# analysis_skeleton <- tar_read(analysis_skeleton)
+# type <- "jobs"
+analyse_scenarios <- function(access_paths, access_diff_path, grid_path, analysis_skeleton) {
+  
+  access <- lapply(access_paths, readRDS)
+  access_diff <- readRDS(access_diff_path)
+  grid <- setDT(readRDS(grid_path))
+  
+  names(access) <- c("antes", "depois")
+  access <- rbindlist(access, idcol = "scenario")
+  
+  # create three different reports, one for job accessibility, the other for
+  # education accessibility and the last for health accessibility
+  
+  report_dir <- "../../data/avaliacao_intervencoes/for/reports"
+  if (!dir.exists(report_dir)) dir.create(report_dir)
+  
+  vapply(
+    c("jobs", "health", "edu"),
+    FUN.VALUE = character(1),
+    FUN = function(type) {
+      
+      filename <- normalizePath(
+        file.path(report_dir, paste0("scenario_analysis_", type, ".html"))
+      )
+      
+      # don't pass the whole accessibility dataset to the report, only relevant
+      # columns
+      
+      relevant_cols <- c(
+        "scenario",
+        "fromId",
+        paste0(c("all_modes_", "transit_bike_", "only_transit_"), type)
+      )
+      relevant_cols_diff <- setdiff(relevant_cols, "scenario")
+      
+      smaller_access <- access[, ..relevant_cols]
+      smaller_access <- setnames(
+        smaller_access,
+        c("scenario", "id", "all_modes", "transit_bike", "only_transit")
+      )
+      
+      smaller_access_diff <- access_diff[, ..relevant_cols_diff]
+      smaller_access_diff <- setnames(
+        smaller_access_diff,
+        c("id", "all_modes", "transit_bike", "only_transit")
+      )
+      
+      rmarkdown::render(
+        analysis_skeleton,
+        output_file = filename,
+        params = list(
+          access = smaller_access,
+          access_diff = smaller_access_diff,
+          grid = grid,
+          type = type
+        ),
+        quiet = TRUE
+      )
+      
+    }
+  )
   
 }
