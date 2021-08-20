@@ -343,12 +343,18 @@ calculate_accessibility <- function(scenario,
 
 
 # access_paths <- c(tar_read(accessibility_antes), tar_read(accessibility_depois))
-calculate_access_diff <- function(access_paths) {
+# method <- "absolute"
+calculate_access_diff <- function(access_paths,
+                                  method = c("absolute", "relative")) {
   
+  method <- method[1]
   access <- lapply(access_paths, readRDS)
   
   # retrieve the name of the columns with accessibility data to calculate diff
   # between the two datasets programatically
+  # if method == "relative" then substitute NaN to 0s (they shouldn't matter
+  # much because there are very few places with 0 accessibility and they all
+  # have 0 accessibility in both scenarios)
   
   access_cols <- setdiff(names(access[[1]]), "fromId")
   setnames(access[[1]], old = access_cols, new = paste0(access_cols, "_antes"))
@@ -356,30 +362,62 @@ calculate_access_diff <- function(access_paths) {
   
   access_diff <- access[[1]][access[[2]], on = "fromId"]
   
-  diff_expression <- paste0(
-    "`:=`(",
-    paste(
-      access_cols,
-      "=",
-      paste0(access_cols, "_depois"),
-      "-",
-      paste0(access_cols, "_antes"),
-      collapse = ", "
-    ),
-    ")"
-  )
-  
-  access_diff[, eval(parse(text = diff_expression))]
+  if (method == "absolute") {
+    
+    diff_expression <- paste0(
+      "`:=`(",
+      paste(
+        access_cols,
+        "=",
+        paste0(access_cols, "_depois"),
+        "-",
+        paste0(access_cols, "_antes"),
+        collapse = ", "
+      ),
+      ")"
+    )
+    
+    access_diff[, eval(parse(text = diff_expression))]
+    
+  } else if (method == "relative") {
+    
+    diff_expression <- paste0(
+      "`:=`(",
+      paste(
+        access_cols,
+        "= (",
+        paste0(access_cols, "_depois"),
+        "-",
+        paste0(access_cols, "_antes"),
+        ") /",
+        paste0(access_cols, "_antes"),
+        collapse = ", "
+      ),
+      ")"
+    )
+    
+    access_diff[, eval(parse(text = diff_expression))]
+    
+    for (col in access_cols) {
+      data.table::set(
+        access_diff,
+        i = which(is.nan(access_diff[[col]])),
+        j = col,
+        value = 0
+      )
+    }
+    
+  }
   
   cols_to_keep <- c("fromId", access_cols)
-  access_diff[, ..cols_to_keep]
+  access_diff <- access_diff[, ..cols_to_keep]
   
   # save object and return path
   
   dir_path <- file.path("../../data/avaliacao_intervencoes/for/output_access")
   if (!dir.exists(dir_path)) dir.create(dir_path)
   
-  file_path <- file.path(dir_path, paste0("access_diff.rds"))
+  file_path <- file.path(dir_path, paste0("access_diff_", method, ".rds"))
   saveRDS(access_diff, file_path)
   
   return(file_path)
@@ -387,7 +425,7 @@ calculate_access_diff <- function(access_paths) {
 }
 
 # access_paths <- list(tar_read(accessibility_antes), tar_read(accessibility_depois))
-# access_diff_path <- tar_read(accessibility_diff)
+# access_diff_path <- tar_read(accessibility_abs_diff)
 # grid_path <- tar_read(grid_path)
 # analysis_skeleton <- tar_read(analysis_skeleton)
 # type <- "jobs"

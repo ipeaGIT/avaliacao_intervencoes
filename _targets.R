@@ -95,15 +95,26 @@ list(
     )
   ),
   tar_target(
-    accessibility_diff,
-    calculate_access_diff(c(accessibility_antes, accessibility_depois)),
+    accessibility_diff_abs,
+    calculate_access_diff(
+      c(accessibility_antes, accessibility_depois),
+      method = "absolute"
+    ),
+    format = "file"
+  ),
+  tar_target(
+    accessibility_diff_rel,
+    calculate_access_diff(
+      c(accessibility_antes, accessibility_depois),
+      method = "relative"
+    ),
     format = "file"
   ),
   tar_target(
     scenario_analysis,
     analyse_scenarios(
       list(accessibility_antes, accessibility_depois),
-      accessibility_diff,
+      accessibility_diff_abs,
       grid_path,
       analysis_skeleton
     ),
