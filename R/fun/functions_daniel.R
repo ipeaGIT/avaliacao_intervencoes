@@ -75,8 +75,7 @@ transit_ttm <- function(scenario, graph, points_path) {
   
 }
 
-# Primeira limitação: como setar o horário de partida da viagem após a primeira
-# milha de bicicleta?
+
 # Outra: provavelmente teria que usar o bike_parks_path antes e depois porque as
 # novas estações vão ter bicicletários
 #
@@ -109,41 +108,77 @@ bfm_ttm <- function(scenario, graph, points_path, bike_parks_path) {
     verbose = FALSE
   )
   
-  rest_ttm <- travel_time_matrix(
-    r5r_core,
-    origins = bike_parks,
-    destinations = points,
-    mode = c("WALK", "TRANSIT"),
-    departure_datetime = as.POSIXct("02-03-2020 06:00:00", format = "%d-%m-%Y %H:%M:%S"),
-    time_window = 120L,
-    max_trip_duration = 180L,
-    max_walk_dist = 1000,
-    n_threads = getOption("R5R_THREADS"),
-    verbose = FALSE
+  # the first mile leg can take anywhere from 0 to 25 minutes in this case.
+  # we then have to calculate 26 different remaining matrices, each one of them
+  # with a different departure time (so 6:00, 6:01, ..., 6:24, 6:25).
+  # we also need to subtract the first mile travel time from the max trip
+  # duration and from the time window to keep their consistency.
+  # finally, when merging the first mile and the remaining matrix we need to use
+  # both the ids and the first mile duration as our indices - so we join not
+  # only the right ids, but the trips that start at the correct time.
+  
+  # TODO: implement list of matrices
+  
+  remaining_ttm <- lapply(
+    0:25,
+    function(i) {
+      departure_datetime <- as.POSIXct(
+        "02-03-2020 06:00:00",
+        format = "%d-%m-%Y %H:%M:%S"
+      )
+      departure_datetime <- departure_datetime + 60 * i
+      max_trip_duration <- 180L - i
+      time_window <- 120L - i
+      
+      travel_time_matrix(
+        r5r_core,
+        origins = bike_parks,
+        destinations = points,
+        mode = c("WALK", "TRANSIT"),
+        departure_datetime = departure_datetime,
+        time_window = time_window,
+        max_trip_duration = max_trip_duration,
+        max_walk_dist = 1000,
+        n_threads = getOption("R5R_THREADS"),
+        verbose = FALSE
+      )
+    }
   )
+  names(remaining_ttm) <- 0:25
+  remaining_ttm <- rbindlist(remaining_ttm, idcol = "departure_minute")
+  remaining_ttm[, departure_minute := as.integer(departure_minute)]
   
   # join both tables together, calculate total travel time and keep only the
   # fastest trip between two points
   
   ttm <- merge(
     first_mile_ttm,
-    rest_ttm,
-    by.x = "toId",
-    by.y = "fromId",
-    all.y = TRUE,
+    remaining_ttm,
+    by.x = c("toId", "travel_time"),
+    by.y = c("fromId", "departure_minute"),
     allow.cartesian = TRUE
   )
   
   setnames(
     ttm,
-    old = c("fromId", "toId", "toId.y", "travel_time.x", "travel_time.y"),
-    new = c("fromId", "intermediateId", "toId", "first_mile_time", "rest_time")
+    old = c("toId", "travel_time", "fromId", "toId.y", "travel_time.y"),
+    new = c("intermediateId", "first_mile_time", "fromId", "toId", "remn_time")
   )
   
-  ttm[, travel_time := first_mile_time + rest_time]
+  ttm[, travel_time := first_mile_time + remn_time]
   ttm <- ttm[
     ttm[, .I[travel_time == min(travel_time)], by = .(fromId, toId)]$V1
   ]
+  
+  # there may be many trips between the same two points whose travel time equals
+  # to the minimum travel time (e.g. imagine that you can get from point A to
+  # point B using 3 stops as intermediate bike-first-mile stations and two of
+  # those trips have the same total travel time, which is lower than the third).
+  # therefore we need to filter 'ttm' to keep only one entry for each pair,
+  # otherwise we will double (triple, quadruple, ...) count the opportunities
+  # when estimating the accessibility.
+  
+  ttm <- ttm[ttm[, .I[1], by = .(fromId, toId)]$V1]
   
   # save object and return path
   
@@ -425,7 +460,7 @@ calculate_access_diff <- function(access_paths,
 }
 
 # access_paths <- list(tar_read(accessibility_antes), tar_read(accessibility_depois))
-# access_diff_path <- tar_read(accessibility_abs_diff)
+# access_diff_path <- tar_read(accessibility_diff_abs)
 # grid_path <- tar_read(grid_path)
 # analysis_skeleton <- tar_read(analysis_skeleton)
 # type <- "jobs"
