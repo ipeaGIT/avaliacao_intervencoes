@@ -24,6 +24,8 @@ access_diff <- params$access_diff
 grid <- params$grid
 type <- params$type
 
+grid <- grid[pop_total > 0 | empregos_total | 0 & saude_baixa | 0 & edu_total > 0]
+
 # bring geometry to be able to create maps
 access[
   grid,
@@ -33,6 +35,7 @@ access[
     decil = i.decil
   )
 ]
+access <- access[vapply(geometry, function(i) !is.null(i), logical(1))]
 
 access_diff[
   grid,
@@ -43,6 +46,7 @@ access_diff[
     geometry = i.geometry
   )
 ]
+access_diff <- access_diff[vapply(geometry, function(i) !is.null(i), logical(1))]
 
 # function that generate plots for each variable
 create_plot <- function(var) {
