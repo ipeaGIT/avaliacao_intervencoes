@@ -26,12 +26,12 @@ list(
   ),
   tar_target(
     exploratory_skeleton,
-    "inst/rmarkdown/exploratory_skeleton.Rmd",
+    "rmarkdown/exploratory_skeleton.Rmd",
     format = "file"
   ),
   tar_target(
     analysis_skeleton,
-    "inst/rmarkdown/scenario_analysis.Rmd",
+    "rmarkdown/scenario_analysis.Rmd",
     format = "file"
   ),
   tar_map(
