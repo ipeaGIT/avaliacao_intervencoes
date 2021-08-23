@@ -20,11 +20,6 @@ list(
     format = "file"
   ),
   tar_target(
-    bike_parks_path,
-    "../../data/avaliacao_intervencoes/r5/points/bike_parks_for.csv",
-    format = "file"
-  ),
-  tar_target(
     grid_path,
     "../../data/acesso_oport/hex_agregados/2019/hex_agregado_for_09_2019.rds",
     format = "file"
@@ -45,6 +40,15 @@ list(
     tar_target(
       graph,
       paste0("../../data/avaliacao_intervencoes/r5/graph/for_", scenario),
+      format = "file"
+    ),
+    tar_target(
+      bike_parks_path,
+      paste0(
+        "../../data/avaliacao_intervencoes/r5/points/bike_parks_for_",
+        scenario,
+        ".csv"
+      ),
       format = "file"
     ),
     tar_target(
