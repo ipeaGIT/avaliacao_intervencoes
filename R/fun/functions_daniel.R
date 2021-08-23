@@ -14,7 +14,7 @@ bike_ttm <- function(scenario, graph, points_path) {
     destinations = points,
     mode = "BICYCLE",
     departure_datetime = as.POSIXct("02-03-2020 06:00:00", format = "%d-%m-%Y %H:%M:%S"),
-    time_window = 120L,
+    time_window = 1L,
     max_trip_duration = bike_max_distance / bike_speed * 60,
     bike_speed = bike_speed,
     max_lts = 2,
@@ -100,7 +100,7 @@ bfm_ttm <- function(scenario, graph, points_path, bike_parks_path) {
     destinations = bike_parks,
     mode = "BICYCLE",
     departure_datetime = as.POSIXct("02-03-2020 06:00:00", format = "%d-%m-%Y %H:%M:%S"),
-    time_window = 120L,
+    time_window = 1L,
     max_trip_duration = bike_max_distance / bike_speed * 60,
     bike_speed = bike_speed,
     max_lts = 2,
@@ -128,7 +128,6 @@ bfm_ttm <- function(scenario, graph, points_path, bike_parks_path) {
       )
       departure_datetime <- departure_datetime + 60 * i
       max_trip_duration <- 180L - i
-      time_window <- 120L - i
       
       travel_time_matrix(
         r5r_core,
@@ -136,7 +135,7 @@ bfm_ttm <- function(scenario, graph, points_path, bike_parks_path) {
         destinations = points,
         mode = c("WALK", "TRANSIT"),
         departure_datetime = departure_datetime,
-        time_window = time_window,
+        time_window = 1L,
         max_trip_duration = max_trip_duration,
         max_walk_dist = 1000,
         n_threads = getOption("R5R_THREADS"),
@@ -251,9 +250,9 @@ exploratory_report <- function(ttm_path,
   bike_parks <- fread(bike_parks_path)
   
   random_points <- data.table(
-    hex_name = c("aldeota", "parangaba", "luciano_cavalcanti", "carlito_pamplona"),
-    lon = c(-38.499719, -38.562038, -38.487955, -38.558178),
-    lat = c(-3.740666, -3.777242, -3.776920, -3.717195)
+    hex_name = c("aldeota", "parangaba", "luciano_cavalcanti", "carlito_pamplona", "ponto_estranho", "ponto_ao_lado", "ponto_abaixo"),
+    lon = c(-38.499719, -38.562038, -38.487955, -38.558178, -38.54842, -38.55137, -38.54847),
+    lat = c(-3.740666, -3.777242, -3.776920, -3.717195, -3.708078, -3.706314, -3.711516)
   )
   random_points <- st_as_sf(random_points, coords = c("lon", "lat"), crs = 4326)
   
@@ -327,6 +326,20 @@ calculate_accessibility <- function(scenario,
     .SDcols = opportunities
   ]
   
+  only_bike_access <- ttm[
+    bike_time <= 60,
+    lapply(.SD, function(i) sum(i, na.rm = TRUE)),
+    by = .(fromId),
+    .SDcols = opportunities
+  ]
+  
+  only_bfm_access <- ttm[
+    bfm_time <= 60,
+    lapply(.SD, function(i) sum(i, na.rm = TRUE)),
+    by = .(fromId),
+    .SDcols = opportunities
+  ]
+  
   transit_bike_access <- ttm[
     transit_time <= 60 | bike_time <= 60,
     lapply(.SD, function(i) sum(i, na.rm = TRUE)),
@@ -352,6 +365,24 @@ calculate_accessibility <- function(scenario,
       transit_bike_jobs = i.total_jobs,
       transit_bike_edu = i.total_edu,
       transit_bike_health = i.basic_health
+    )
+  ]
+  all_modes_access[
+    only_bike_access,
+    on = "fromId",
+    `:=`(
+      only_bike_jobs = i.total_jobs,
+      only_bike_edu = i.total_edu,
+      only_bike_health = i.basic_health
+    )
+  ]
+  all_modes_access[
+    only_bfm_access,
+    on = "fromId",
+    `:=`(
+      only_bfm_jobs = i.total_jobs,
+      only_bfm_edu = i.total_edu,
+      only_bfm_health = i.basic_health
     )
   ]
   all_modes_access[
@@ -464,7 +495,10 @@ calculate_access_diff <- function(access_paths,
 # grid_path <- tar_read(grid_path)
 # analysis_skeleton <- tar_read(analysis_skeleton)
 # type <- "jobs"
-analyse_scenarios <- function(access_paths, access_diff_path, grid_path, analysis_skeleton) {
+analyse_scenarios <- function(access_paths,
+                              access_diff_path,
+                              grid_path,
+                              analysis_skeleton) {
   
   access <- lapply(access_paths, readRDS)
   access_diff <- readRDS(access_diff_path)
@@ -494,20 +528,29 @@ analyse_scenarios <- function(access_paths, access_diff_path, grid_path, analysi
       relevant_cols <- c(
         "scenario",
         "fromId",
-        paste0(c("all_modes_", "transit_bike_", "only_transit_"), type)
+        paste0(
+          c(
+            "all_modes_",
+            "transit_bike_",
+            "only_transit_",
+            "only_bike_",
+            "only_bfm_"
+          ),
+          type
+        )
       )
       relevant_cols_diff <- setdiff(relevant_cols, "scenario")
       
       smaller_access <- access[, ..relevant_cols]
       smaller_access <- setnames(
         smaller_access,
-        c("scenario", "id", "all_modes", "transit_bike", "only_transit")
+        c("scenario", "id", "all_modes", "transit_bike", "only_transit", "only_bike", "only_bfm")
       )
       
       smaller_access_diff <- access_diff[, ..relevant_cols_diff]
       smaller_access_diff <- setnames(
         smaller_access_diff,
-        c("id", "all_modes", "transit_bike", "only_transit")
+        c("id", "all_modes", "transit_bike", "only_transit", "only_bike", "only_bfm")
       )
       
       rmarkdown::render(
