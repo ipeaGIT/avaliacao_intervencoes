@@ -355,43 +355,43 @@ calculate_accessibility <- function(scenario,
   ]
   setnames(
     all_modes_access,
-    c("fromId", "all_modes_jobs", "all_modes_edu", "all_modes_health")
+    c("fromId", "all_modes_CMATT60", "all_modes_CMAET60", "all_modes_CMASB60")
   )
   
   all_modes_access[
     transit_bike_access,
     on = "fromId",
     `:=`(
-      transit_bike_jobs = i.total_jobs,
-      transit_bike_edu = i.total_edu,
-      transit_bike_health = i.basic_health
+      transit_bike_CMATT60 = i.total_jobs,
+      transit_bike_CMAET60 = i.total_edu,
+      transit_bike_CMASB60 = i.basic_health
     )
   ]
   all_modes_access[
     only_bike_access,
     on = "fromId",
     `:=`(
-      only_bike_jobs = i.total_jobs,
-      only_bike_edu = i.total_edu,
-      only_bike_health = i.basic_health
+      only_bike_CMATT60 = i.total_jobs,
+      only_bike_CMAET60 = i.total_edu,
+      only_bike_CMASB60 = i.basic_health
     )
   ]
   all_modes_access[
     only_bfm_access,
     on = "fromId",
     `:=`(
-      only_bfm_jobs = i.total_jobs,
-      only_bfm_edu = i.total_edu,
-      only_bfm_health = i.basic_health
+      only_bfm_CMATT60 = i.total_jobs,
+      only_bfm_CMAET60 = i.total_edu,
+      only_bfm_CMASB60 = i.basic_health
     )
   ]
   all_modes_access[
     only_transit_access,
     on = "fromId",
     `:=`(
-      only_transit_jobs = i.total_jobs,
-      only_transit_edu = i.total_edu,
-      only_transit_health = i.basic_health
+      only_transit_CMATT60 = i.total_jobs,
+      only_transit_CMAET60 = i.total_edu,
+      only_transit_CMASB60 = i.basic_health
     )
   ]
   
@@ -494,7 +494,7 @@ calculate_access_diff <- function(access_paths,
 # access_diff_path <- tar_read(accessibility_diff_abs)
 # grid_path <- tar_read(grid_path)
 # analysis_skeleton <- tar_read(analysis_skeleton)
-# type <- "jobs"
+# type <- "CMATT60"
 analyse_scenarios <- function(access_paths,
                               access_diff_path,
                               grid_path,
@@ -514,7 +514,7 @@ analyse_scenarios <- function(access_paths,
   if (!dir.exists(report_dir)) dir.create(report_dir)
   
   vapply(
-    c("jobs", "health", "edu"),
+    c("CMATT60", "CMAET60", "CMASB60"),
     FUN.VALUE = character(1),
     FUN = function(type) {
       
