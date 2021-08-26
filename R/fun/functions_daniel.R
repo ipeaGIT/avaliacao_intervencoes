@@ -490,6 +490,7 @@ calculate_access_diff <- function(access_paths,
   
 }
 
+
 # access_paths <- list(tar_read(accessibility_antes), tar_read(accessibility_depois))
 # access_diff_path <- tar_read(accessibility_diff_abs)
 # grid_path <- tar_read(grid_path)
@@ -567,5 +568,157 @@ analyse_scenarios <- function(access_paths,
       
     }
   )
+  
+}
+
+
+# access_diff_abs <- tar_read(accessibility_diff_abs)
+# access_diff_rel <- tar_read(accessibility_diff_rel)
+# grid_path <- tar_read(grid_path)
+# measure <- "CMATT60"
+create_boxplots <- function(access_diff_abs, access_diff_rel, grid_path) {
+  
+  access_diff_abs <- readRDS(access_diff_abs)
+  access_diff_rel <- readRDS(access_diff_rel)
+  grid <- setDT(readRDS(grid_path))
+  
+  # join accessibility difference datasets to create a faceted chart
+  
+  access_diff <- rbind(
+    abs = access_diff_abs,
+    rel = access_diff_rel,
+    idcol = "type"
+  )
+  access_diff[
+    grid,
+    on = c(fromId = "id_hex"),
+    `:=`(pop = i.pop_total, decil = i.decil)
+  ]
+  access_diff <- access_diff[decil > 0]
+  
+  measures <- c("CMATT60", "CMAET60", "CMASB60")
+  
+  paths <- vapply(
+    measures,
+    FUN.VALUE = character(1),
+    FUN = function(measure) {
+      relevant_var <- paste0("only_transit_", measure)
+      
+      abs_ceiling <- fcase(
+        measure == "CMATT60", 30000,
+        measure == "CMAET60", 8,
+        measure == "CMASB60", 5
+      )
+      rel_ceiling <- fcase(
+        measure == "CMATT60", 0.1,
+        measure == "CMAET60", 0.05,
+        measure == "CMASB60", 0.05
+      )
+      
+      boxplot_theme <- theme_minimal() +
+        theme( 
+          panel.grid = element_blank(),
+          plot.subtitle = element_markdown(),
+          # legend.text = element_text(size = 5),
+          legend.position = "bottom",
+          legend.text.align = 0.5
+          # axis.text.y = element_text(size = 6),
+          # axis.title.x = element_text(size = 7),
+          # axis.title.y = element_text(size = 7, face="bold"),
+          # legend.title = element_text(size = 7)
+          # 
+        )
+      
+      # absolute difference
+      
+      palma_abs <- calculate_palma(access_diff[type == "abs"], relevant_var)
+      
+      abs_plot <- ggplot(access_diff[type == "abs"]) +
+        geom_boxplot(
+          aes(
+            as.factor(decil),
+            get(relevant_var),
+            weight = pop,
+            color = as.factor(decil)
+          ),
+          outlier.size = 1.5,
+          outlier.alpha = 0.5,
+          show.legend = FALSE
+        ) +
+        scale_colour_brewer(palette = "RdBu") +
+        guides(color = guide_legend(nrow = 1, label.position = "bottom")) +
+        labs(
+          y = "Ganho absoluto de acess.",
+          x = NULL,
+          subtitle = paste0("**Razao de Palma**: ", palma_abs)
+        ) +
+        coord_cartesian(ylim = c(0, abs_ceiling)) +
+        boxplot_theme
+      
+      # relative difference
+      
+      palma_rel <- calculate_palma(access_diff[type == "rel"], relevant_var)
+      
+      rel_plot <- ggplot(access_diff[type == "rel"]) +
+        geom_boxplot(
+          aes(
+            as.factor(decil),
+            get(relevant_var),
+            weight = pop,
+            color = as.factor(decil)
+          ),
+          outlier.size = 1.5,
+          outlier.alpha = 0.5
+        ) +
+        scale_colour_brewer(
+          palette = "RdBu",
+          labels = c("1\nmais pobres", 2:9, "10\nmais ricos"),
+          name = "Decil de renda"
+        ) +
+        scale_y_continuous(labels = scales::percent) +
+        guides(color = guide_legend(nrow = 1, label.position = "bottom")) +
+        labs(
+          y = "Ganho relativo de acess.",
+          x = NULL,
+          subtitle = paste0("**Razao de Palma**: ", palma_rel)
+        ) +
+        coord_cartesian(ylim = c(0, rel_ceiling)) +
+        boxplot_theme
+      
+      # join them, save and return the result so the target follows the file
+      
+      plot <- (abs_plot / rel_plot) +
+        plot_layout(heights = c(1, 1))
+      
+      dir_path <- file.path("../../data/avaliacao_intervencoes/for/figures")
+      if (!dir.exists(dir_path)) dir.create(dir_path)
+      
+      dir_path <- file.path(dir_path, "boxplot_difference")
+      if (!dir.exists(dir_path)) dir.create(dir_path)
+      
+      file_path <- file.path(dir_path, paste0(measure, ".png"))
+      ggsave(
+        file_path,
+        plot,
+        width = 16,
+        height = 13,
+        units = "cm"
+      )
+      
+      return(file_path)
+      
+    }
+  )
+  
+}
+
+calculate_palma <- function(access_diff, relevant_var) {
+  
+  richest_10 <- access_diff[decil == 10]
+  poorest_40 <- access_diff[decil >= 1 & decil <= 4]
+  
+  palma <- weighted.mean(richest_10[[relevant_var]], w = richest_10$pop) /
+    weighted.mean(poorest_40[[relevant_var]], w = poorest_40$pop)
+  palma <- format(palma, digits = 4)
   
 }

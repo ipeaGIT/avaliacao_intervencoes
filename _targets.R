@@ -9,6 +9,9 @@ suppressPackageStartupMessages({
   library(data.table)
   library(r5r)
   library(sf)
+  library(ggplot2)
+  library(ggtext)
+  library(patchwork)
 })
 
 source("R/fun/functions_daniel.R")
@@ -122,6 +125,11 @@ list(
       grid_path,
       analysis_skeleton
     ),
+    format = "file"
+  ),
+  tar_target(
+    boxplot_charts,
+    create_boxplots(accessibility_diff_abs, accessibility_diff_rel, grid_path),
     format = "file"
   )
 )
