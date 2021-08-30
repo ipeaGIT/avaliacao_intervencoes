@@ -82,7 +82,7 @@ transit_ttm <- function(scenario, graph, points_path) {
 # scenario <- "antes"
 # graph <- tar_read(graph_antes)
 # points_path <- tar_read(points_path)
-# bike_parks_path <- tar_read(bike_parks_path)
+# bike_parks_path <- tar_read(bike_parks_path_antes)
 bfm_ttm <- function(scenario, graph, points_path, bike_parks_path) {
   
   r5r_core <- setup_r5(graph, use_elevation = TRUE)
@@ -616,7 +616,8 @@ create_boxplots <- function(access_diff_abs, access_diff_rel, grid_path) {
       )
       
       boxplot_theme <- theme_minimal() +
-        theme( 
+        theme(
+          axis.text.x = element_blank(),
           panel.grid = element_blank(),
           plot.subtitle = element_markdown(),
           # legend.text = element_text(size = 5),
@@ -712,6 +713,7 @@ create_boxplots <- function(access_diff_abs, access_diff_rel, grid_path) {
   
 }
 
+
 calculate_palma <- function(access_diff, relevant_var) {
   
   richest_10 <- access_diff[decil == 10]
@@ -720,5 +722,119 @@ calculate_palma <- function(access_diff, relevant_var) {
   palma <- weighted.mean(richest_10[[relevant_var]], w = richest_10$pop) /
     weighted.mean(poorest_40[[relevant_var]], w = poorest_40$pop)
   palma <- format(palma, digits = 4)
+  
+}
+
+
+# access_antes <- tar_read(accessibility_antes)
+# access_depois <- tar_read(accessibility_depois)
+# grid_path <- tar_read(grid_path)
+# measure <- "CMATT60"
+create_dist_maps <- function(access_antes, access_depois, grid_path) {
+  
+  access_antes <- readRDS(access_antes)
+  access_depois <- readRDS(access_depois)
+  grid <- setDT(readRDS(grid_path))
+  
+  # join accessibility difference datasets to create a faceted chart
+  
+  access <- rbind(
+    Antes = access_antes,
+    Depois = access_depois,
+    idcol = "type"
+  )
+  access[
+    grid,
+    on = c(fromId = "id_hex"),
+    `:=`(geometry = i.geometry, decil = i.decil)
+  ]
+  
+  # download city and transit routes shapes
+  
+  city_shape <- geobr::read_municipality(2304400)
+  
+  gtfs <-  gtfstools::read_gtfs("../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_new.zip")
+  desired_trips <- gtfs$trips[
+    gtfs$routes,
+    on = "route_id",
+    `:=`(route_id = i.route_id, route_long_name = i.route_long_name)
+  ]
+  desired_trips <- desired_trips[
+    desired_trips[, .I[1], by = route_long_name]$V1
+  ]
+  desired_trips <- desired_trips$trip_id
+  
+  transit_shapes <- gtfstools::get_trip_geometry(
+    gtfs,
+    trip_id = desired_trips
+  )
+  transit_shapes <- setDT(transit_shapes)[
+    !(trip_id == "LL-0-1" & origin_file == "stop_times")
+  ]
+  
+  measures <- c("CMATT60", "CMAET60", "CMASB60")
+  
+  paths <- vapply(
+    measures,
+    FUN.VALUE = character(1),
+    FUN = function(measure) {
+      relevant_var <- paste0("only_transit_", measure)
+      
+      label_func <- if (grepl("TT", measure)) {
+        scales::label_number(
+          accuracy = 1,
+          scale = 1/1000,
+          suffix = "k",
+          big.mark = ","
+        )
+      } else {
+        scales::label_number()
+      }
+      
+      plot <- ggplot() +
+        geom_sf(
+          data = st_sf(access),
+          aes(fill = get(relevant_var)),
+          color = NA
+        ) +
+        geom_sf(
+          data = st_sf(transit_shapes),
+          size = 0.5,
+          alpha = 0.7
+        ) +
+        geom_sf(data = city_shape, fill = NA) +
+        facet_wrap(~ type) +
+        scale_fill_viridis_c(
+          name = "Acessibilidade por\ntransporte publico",
+          option = "inferno",
+          label = label_func,
+          n.breaks = 4
+        ) +
+        theme_minimal() +
+        theme(
+          legend.position = "bottom",
+          axis.text = element_blank(),
+          panel.grid = element_blank()
+        )
+      
+      dir_path <- file.path("../../data/avaliacao_intervencoes/for/figures")
+      if (!dir.exists(dir_path)) dir.create(dir_path)
+      
+      dir_path <- file.path(dir_path, "map_distribution")
+      if (!dir.exists(dir_path)) dir.create(dir_path)
+      
+      file_path <- file.path(dir_path, paste0(measure, ".png"))
+      ggsave(
+        file_path,
+        plot,
+        width = 16,
+        height = 9,
+        units = "cm"
+      )
+      
+      return(file_path)
+      
+    }
+  )
   
 }

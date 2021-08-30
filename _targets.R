@@ -131,5 +131,10 @@ list(
     boxplot_charts,
     create_boxplots(accessibility_diff_abs, accessibility_diff_rel, grid_path),
     format = "file"
+  ),
+  tar_target(
+    distribution_maps,
+    create_dist_maps(accessibility_antes, accessibility_depois, grid_path),
+    format = "file"
   )
 )
