@@ -136,5 +136,10 @@ list(
     distribution_maps,
     create_dist_maps(accessibility_antes, accessibility_depois, grid_path),
     format = "file"
+  ),
+  tar_target(
+    difference_maps,
+    create_diff_maps(accessibility_diff_abs, accessibility_diff_rel, grid_path),
+    format = "file"
   )
 )

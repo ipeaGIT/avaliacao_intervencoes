@@ -582,8 +582,6 @@ create_boxplots <- function(access_diff_abs, access_diff_rel, grid_path) {
   access_diff_rel <- readRDS(access_diff_rel)
   grid <- setDT(readRDS(grid_path))
   
-  # join accessibility difference datasets to create a faceted chart
-  
   access_diff <- rbind(
     abs = access_diff_abs,
     rel = access_diff_rel,
@@ -821,6 +819,153 @@ create_dist_maps <- function(access_antes, access_depois, grid_path) {
       if (!dir.exists(dir_path)) dir.create(dir_path)
       
       dir_path <- file.path(dir_path, "map_distribution")
+      if (!dir.exists(dir_path)) dir.create(dir_path)
+      
+      file_path <- file.path(dir_path, paste0(measure, ".png"))
+      ggsave(
+        file_path,
+        plot,
+        width = 16,
+        height = 9,
+        units = "cm"
+      )
+      
+      return(file_path)
+      
+    }
+  )
+  
+}
+
+
+# access_diff_abs <- tar_read(accessibility_diff_abs)
+# access_diff_rel <- tar_read(accessibility_diff_rel)
+# grid_path <- tar_read(grid_path)
+# measure <- "CMATT60"
+create_diff_maps <- function(access_diff_abs, access_diff_rel, grid_path) {
+  
+  access_diff_abs <- readRDS(access_diff_abs)
+  access_diff_rel <- readRDS(access_diff_rel)
+  grid <- setDT(readRDS(grid_path))
+  
+  access_diff <- rbind(
+    abs = access_diff_abs,
+    rel = access_diff_rel,
+    idcol = "type"
+  )
+  access_diff[
+    grid,
+    on = c(fromId = "id_hex"),
+    `:=`(geometry = i.geometry, decil = i.decil)
+  ]
+  # access_diff <- access_diff[decil > 0]
+  
+  # download city and transit routes shapes
+  
+  city_shape <- geobr::read_municipality(2304400)
+  
+  gtfs <-  gtfstools::read_gtfs("../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_new.zip")
+  desired_trips <- gtfs$trips[
+    gtfs$routes,
+    on = "route_id",
+    `:=`(route_id = i.route_id, route_long_name = i.route_long_name)
+  ]
+  desired_trips <- desired_trips[
+    desired_trips[, .I[1], by = route_long_name]$V1
+  ]
+  desired_trips <- desired_trips$trip_id
+  
+  transit_shapes <- gtfstools::get_trip_geometry(
+    gtfs,
+    trip_id = desired_trips
+  )
+  transit_shapes <- setDT(transit_shapes)[
+    !(trip_id == "LL-0-1" & origin_file == "stop_times")
+  ]
+  
+  measures <- c("CMATT60", "CMAET60", "CMASB60")
+  
+  paths <- vapply(
+    measures,
+    FUN.VALUE = character(1),
+    FUN = function(measure) {
+      relevant_var <- paste0("only_transit_", measure)
+      
+      diff_map_theme <- theme_minimal() +
+        theme(
+          legend.position = "bottom",
+          axis.text = element_blank(),
+          panel.grid = element_blank(),
+          plot.subtitle = element_text(hjust = 0.5)
+        )
+      
+      label_func <- if (grepl("TT", measure)) {
+        scales::label_number(
+          accuracy = 1,
+          scale = 1/1000,
+          suffix = "k",
+          big.mark = ","
+        )
+      } else {
+        scales::label_number()
+      }
+      
+      # absolute difference
+      
+      abs_plot <- ggplot() +
+        geom_sf(
+          data = st_sf(access_diff[type == "abs"]),
+          aes(fill = get(relevant_var)),
+          color = NA
+        ) +
+        geom_sf(
+          data = st_sf(transit_shapes),
+          size = 0.5,
+          alpha = 0.7
+        ) +
+        geom_sf(data = city_shape, fill = NA) +
+        scale_fill_distiller(
+          name = "Acessibilidade",
+          palette = "PuBu",
+          label = label_func,
+          n.breaks = 4,
+          direction = 1
+        ) +
+        labs(subtitle = "Dif. absoluta") +
+        diff_map_theme
+      
+      # relative difference
+      
+      rel_plot <- ggplot() +
+        geom_sf(
+          data = st_sf(access_diff[type == "rel"]),
+          aes(fill = get(relevant_var)),
+          color = NA
+        ) +
+        geom_sf(
+          data = st_sf(transit_shapes),
+          size = 0.5,
+          alpha = 0.7
+        ) +
+        geom_sf(data = city_shape, fill = NA) +
+        scale_fill_distiller(
+          name = "Acessibilidade",
+          palette = "PuBu",
+          n.breaks = 4,
+          direction = 1,
+          labels = scales::percent_format()
+        ) +
+        labs(subtitle = "Dif. relativa") +
+        diff_map_theme
+      
+      # join them using patchwork, save the result and return the path
+      
+      plot <- abs_plot | rel_plot
+      
+      dir_path <- file.path("../../data/avaliacao_intervencoes/for/figures")
+      if (!dir.exists(dir_path)) dir.create(dir_path)
+      
+      dir_path <- file.path(dir_path, "map_difference")
       if (!dir.exists(dir_path)) dir.create(dir_path)
       
       file_path <- file.path(dir_path, paste0(measure, ".png"))
