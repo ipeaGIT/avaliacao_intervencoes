@@ -37,10 +37,11 @@ bike_ttm <- function(scenario, graph, points_path) {
   
 }
 
-# scenario <- "antes"
-# graph <- tar_read(graph_antes)
-# points_path <- tar_read(points_path)
-transit_ttm <- function(scenario, graph, points_path) {
+# city <- tar_read(both_cities)[1]
+# scenario <- tar_read(before_after)[1]
+# graph <- tar_read(graph)[1]
+# points_path <- tar_read(points_path)[1]
+transit_ttm <- function(city, scenario, graph, points_path) {
   
   r5r_core <- setup_r5(graph, use_elevation = TRUE)
   
@@ -63,8 +64,7 @@ transit_ttm <- function(scenario, graph, points_path) {
   # save object and return path
   
   dir_path <- file.path(
-    "../../data/avaliacao_intervencoes/for/ttmatrix",
-    scenario
+    "../../data/avaliacao_intervencoes", city, "ttmatrix", scenario
   )
   if (!dir.exists(dir_path)) dir.create(dir_path)
   
@@ -293,11 +293,23 @@ exploratory_report <- function(ttm_path,
 }
 
 
-# scenario <- "antes"
-# ttm_path <- tar_read(full_matrix_antes)
-# grid_path <- tar_read(grid_path)
+# # for_goi case
+#
+# city <- tar_read(both_cities)[1]
+# scenario <- tar_read(before_after)[1]
+# ttm_path <- tar_read(transit_matrix)[1]
+# grid_path <- tar_read(grid_path)[1]
 # opportunities = c("total_jobs", "total_edu", "basic_health")
-calculate_accessibility <- function(scenario,
+#
+# # for special case
+#
+# city <- "for"
+# scenario <- tar_read(before_after)[1]
+# ttm_path <- tar_read(full_matrix_antes)
+# grid_path <- tar_read(grid_path)[1]
+# opportunities = c("total_jobs", "total_edu", "basic_health")
+calculate_accessibility <- function(city,
+                                    scenario,
                                     ttm_path,
                                     grid_path,
                                     opportunities = c(
@@ -319,74 +331,24 @@ calculate_accessibility <- function(scenario,
     )
   ]
   
-  only_transit_access <- ttm[
+  # if ttm$bfm_time is NULL then this is the transit-only matrix. therefore,
+  # only the transit-only bits of the accessibility calculation will be
+  # conducted.
+  # otherwise we are dealing with fortaleza-specific analysis that also include
+  # bike-only and bike first mile scenarios
+  
+  setnames(ttm, old = "travel_time", new = "transit_time", skip_absent = TRUE)
+  
+  transit_access <- ttm[
     transit_time <= 60,
     lapply(.SD, function(i) sum(i, na.rm = TRUE)),
     by = .(fromId),
     .SDcols = opportunities
   ]
   
-  only_bike_access <- ttm[
-    bike_time <= 60,
-    lapply(.SD, function(i) sum(i, na.rm = TRUE)),
-    by = .(fromId),
-    .SDcols = opportunities
-  ]
-  
-  only_bfm_access <- ttm[
-    bfm_time <= 60,
-    lapply(.SD, function(i) sum(i, na.rm = TRUE)),
-    by = .(fromId),
-    .SDcols = opportunities
-  ]
-  
-  transit_bike_access <- ttm[
-    transit_time <= 60 | bike_time <= 60,
-    lapply(.SD, function(i) sum(i, na.rm = TRUE)),
-    by = .(fromId),
-    .SDcols = opportunities
-  ]
-  
-  all_modes_access <- ttm[
-    transit_time <= 60 | bike_time <= 60 | bfm_time <= 60,
-    lapply(.SD, function(i) sum(i, na.rm = TRUE)),
-    by = .(fromId),
-    .SDcols = opportunities
-  ]
-  setnames(
-    all_modes_access,
-    c("fromId", "all_modes_CMATT60", "all_modes_CMAET60", "all_modes_CMASB60")
-  )
-  
-  all_modes_access[
-    transit_bike_access,
-    on = "fromId",
-    `:=`(
-      transit_bike_CMATT60 = i.total_jobs,
-      transit_bike_CMAET60 = i.total_edu,
-      transit_bike_CMASB60 = i.basic_health
-    )
-  ]
-  all_modes_access[
-    only_bike_access,
-    on = "fromId",
-    `:=`(
-      only_bike_CMATT60 = i.total_jobs,
-      only_bike_CMAET60 = i.total_edu,
-      only_bike_CMASB60 = i.basic_health
-    )
-  ]
-  all_modes_access[
-    only_bfm_access,
-    on = "fromId",
-    `:=`(
-      only_bfm_CMATT60 = i.total_jobs,
-      only_bfm_CMAET60 = i.total_edu,
-      only_bfm_CMASB60 = i.basic_health
-    )
-  ]
-  all_modes_access[
-    only_transit_access,
+  access <- data.table(fromId = unique(ttm$fromId))
+  access[
+    transit_access,
     on = "fromId",
     `:=`(
       only_transit_CMATT60 = i.total_jobs,
@@ -395,13 +357,88 @@ calculate_accessibility <- function(scenario,
     )
   ]
   
-  # save object and return path
+  if (!is.null(ttm$bfm_time)) {
+    
+    only_bike_access <- ttm[
+      bike_time <= 60,
+      lapply(.SD, function(i) sum(i, na.rm = TRUE)),
+      by = .(fromId),
+      .SDcols = opportunities
+    ]
+    access[
+      only_bike_access,
+      on = "fromId",
+      `:=`(
+        only_bike_CMATT60 = i.total_jobs,
+        only_bike_CMAET60 = i.total_edu,
+        only_bike_CMASB60 = i.basic_health
+      )
+    ]
+    
+    only_bfm_access <- ttm[
+      bfm_time <= 60,
+      lapply(.SD, function(i) sum(i, na.rm = TRUE)),
+      by = .(fromId),
+      .SDcols = opportunities
+    ]
+    access[
+      only_bfm_access,
+      on = "fromId",
+      `:=`(
+        only_bfm_CMATT60 = i.total_jobs,
+        only_bfm_CMAET60 = i.total_edu,
+        only_bfm_CMASB60 = i.basic_health
+      )
+    ]
+    
+    transit_bike_access <- ttm[
+      transit_time <= 60 | bike_time <= 60,
+      lapply(.SD, function(i) sum(i, na.rm = TRUE)),
+      by = .(fromId),
+      .SDcols = opportunities
+    ]
+    access[
+      transit_bike_access,
+      on = "fromId",
+      `:=`(
+        transit_bike_CMATT60 = i.total_jobs,
+        transit_bike_CMAET60 = i.total_edu,
+        transit_bike_CMASB60 = i.basic_health
+      )
+    ]
+    
+    all_modes_access <- ttm[
+      transit_time <= 60 | bike_time <= 60 | bfm_time <= 60,
+      lapply(.SD, function(i) sum(i, na.rm = TRUE)),
+      by = .(fromId),
+      .SDcols = opportunities
+    ]
+    access[
+      all_modes_access,
+      on = "fromId",
+      `:=`(
+        all_modes_CMATT60 = i.total_jobs,
+        all_modes_CMAET60 = i.total_edu,
+        all_modes_CMASB60 = i.basic_health
+      )
+    ]
+    
+  }
   
-  dir_path <- file.path("../../data/avaliacao_intervencoes/for/output_access")
+  # save object and return path
+  # change name of file depending if it's only transit or all modes access.
+  
+  dir_path <- file.path(
+    "../../data/avaliacao_intervencoes", city, "output_access"
+  )
   if (!dir.exists(dir_path)) dir.create(dir_path)
   
-  file_path <- file.path(dir_path, paste0("access_", scenario, ".rds"))
-  saveRDS(all_modes_access, file_path)
+  file_path <- ifelse(
+    is.null(ttm$bfm_time),
+    file.path(dir_path, paste0("transit_access_", scenario, ".rds")),
+    file.path(dir_path, paste0("full_access_", scenario, ".rds"))
+  )
+  saveRDS(access, file_path)
   
   return(file_path)
   
