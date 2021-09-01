@@ -12,6 +12,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(ggtext)
   library(patchwork)
+  library(dplyr)
 })
 
 source("R/fun/functions_daniel.R")
@@ -59,20 +60,6 @@ list(
     pattern = cross(both_cities, before_after)
   ),
   tar_target(
-    branches_metadata,
-    data.table(
-      city = both_cities,
-      scenario = before_after,
-      graph = graph,
-      grid = grid_path,
-      points = points_path
-    ),
-    pattern = map(
-      graph,
-      cross(map(both_cities, points_path, grid_path), before_after)
-    )
-  ),
-  tar_target(
     transit_matrix,
     transit_ttm(both_cities, before_after, graph, points_path),
     format = "file",
@@ -82,7 +69,7 @@ list(
     )
   ),
   tar_target(
-    transit_accessibility,
+    transit_access,
     calculate_accessibility(
       both_cities,
       before_after,
@@ -94,6 +81,39 @@ list(
       transit_matrix,
       cross(map(both_cities, grid_path), before_after)
     )
+  ),
+  tar_target(
+    access_metadata,
+    tar_group(
+      group_by(
+        tidyr::nesting(
+          access_file = transit_access,
+          tidyr::crossing(city = both_cities, scenario = before_after)
+        ),       
+        city
+      )
+    ),
+    iteration = "group"
+  ),
+  tar_target(
+    transit_access_diff_abs,
+    calculate_access_diff(
+      access_metadata$city[1],
+      access_metadata$access_file,
+      method = "absolute"
+    ),
+    pattern = map(access_metadata),
+    format = "file"
+  ),
+  tar_target(
+    transit_access_diff_rel,
+    calculate_access_diff(
+      access_metadata$city[1],
+      access_metadata$access_file,
+      method = "relative"
+    ),
+    pattern = map(access_metadata),
+    format = "file"
   )
   
   

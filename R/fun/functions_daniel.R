@@ -445,9 +445,11 @@ calculate_accessibility <- function(city,
 }
 
 
-# access_paths <- c(tar_read(accessibility_antes), tar_read(accessibility_depois))
+# city <- "for"
+# access_paths <- tar_read(grouped_metadata)$access_file[1:2]
 # method <- "absolute"
-calculate_access_diff <- function(access_paths,
+calculate_access_diff <- function(city,
+                                  access_paths,
                                   method = c("absolute", "relative")) {
   
   method <- method[1]
@@ -517,10 +519,16 @@ calculate_access_diff <- function(access_paths,
   
   # save object and return path
   
-  dir_path <- file.path("../../data/avaliacao_intervencoes/for/output_access")
+  dir_path <- file.path(
+    "../../data/avaliacao_intervencoes", city, "output_access"
+  )
   if (!dir.exists(dir_path)) dir.create(dir_path)
   
-  file_path <- file.path(dir_path, paste0("access_diff_", method, ".rds"))
+  file_path <- ifelse(
+    any(grepl("only_bfm", names(access_diff))),
+    file.path(dir_path, paste0("full_access_diff_", method, ".rds")),
+    file.path(dir_path, paste0("transit_access_diff_", method, ".rds"))
+  )
   saveRDS(access_diff, file_path)
   
   return(file_path)
