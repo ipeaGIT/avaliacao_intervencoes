@@ -451,8 +451,8 @@ calculate_accessibility <- function(city,
 }
 
 
-# city <- "for"
-# access_paths <- tar_read(access_metadata)$access_file[1:2]
+# city <- "goi"
+# access_paths <- tar_read(access_metadata)$access_file[3:4]
 # method <- "absolute"
 calculate_access_diff <- function(city,
                                   access_paths,
@@ -919,11 +919,12 @@ create_dist_maps <- function(city, access_paths, grid_path) {
 }
 
 
-# access_diff_abs <- tar_read(accessibility_diff_abs)
-# access_diff_rel <- tar_read(accessibility_diff_rel)
-# grid_path <- tar_read(grid_path)
+# city <- "for"
+# access_diff_abs <- tar_read(transit_access_diff_abs)[1]
+# access_diff_rel <- tar_read(transit_access_diff_rel)[1]
+# grid_path <- tar_read(grid_path)[1]
 # measure <- "CMATT60"
-create_diff_maps <- function(access_diff_abs, access_diff_rel, grid_path) {
+create_diff_maps <- function(city, access_diff_abs, access_diff_rel, grid_path) {
   
   access_diff_abs <- readRDS(access_diff_abs)
   access_diff_rel <- readRDS(access_diff_rel)
@@ -941,28 +942,58 @@ create_diff_maps <- function(access_diff_abs, access_diff_rel, grid_path) {
   ]
   # access_diff <- access_diff[decil > 0]
   
-  # download city and transit routes shapes
+  # download city and transit routes shapes, depending on the city
   
-  city_shape <- geobr::read_municipality(2304400)
+  city_code <- ifelse(city == "for", 2304400, 5208707)
+  city_shape <- geobr::read_municipality(city_code)
   
-  gtfs <-  gtfstools::read_gtfs("../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_new.zip")
-  desired_trips <- gtfs$trips[
-    gtfs$routes,
-    on = "route_id",
-    `:=`(route_id = i.route_id, route_long_name = i.route_long_name)
-  ]
-  desired_trips <- desired_trips[
-    desired_trips[, .I[1], by = route_long_name]$V1
-  ]
-  desired_trips <- desired_trips$trip_id
+  if (city == "for") {
+    
+    gtfs <-  gtfstools::read_gtfs(
+      "../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_new.zip"
+    )
+    desired_trips <- gtfs$trips[
+      gtfs$routes,
+      on = "route_id",
+      `:=`(route_id = i.route_id, route_long_name = i.route_long_name)
+    ]
+    desired_trips <- desired_trips[
+      desired_trips[, .I[1], by = route_long_name]$V1
+    ]
+    desired_trips <- desired_trips$trip_id
+    
+    transit_shapes <- gtfstools::get_trip_geometry(
+      gtfs,
+      trip_id = desired_trips
+    )
+    transit_shapes <- setDT(transit_shapes)[
+      !(trip_id == "LL-0-1" & origin_file == "stop_times")
+    ]
+    
+  } else if (city == "goi") {
+    
+    gtfs <- gtfstools::read_gtfs(
+      "../../data/avaliacao_intervencoes/r5/graph/goi_depois/gtfs_goi_rmtc_2019-10_depois.zip"
+    )
+    
+    desired_trips <- gtfs$trips[
+      gtfs$routes,
+      on = "route_id",
+      `:=`(route_id = i.route_id)
+    ]
+    desired_trips <- desired_trips[grepl("BRT", route_id)]
+    desired_trips <- desired_trips[desired_trips[, .I[1], by = shape_id]$V1]
+    desired_trips <- desired_trips$trip_id
+    
+    transit_shapes <- gtfstools::get_trip_geometry(
+      gtfs,
+      trip_id = desired_trips,
+      file = "shapes"
+    )
+    
+  }
   
-  transit_shapes <- gtfstools::get_trip_geometry(
-    gtfs,
-    trip_id = desired_trips
-  )
-  transit_shapes <- setDT(transit_shapes)[
-    !(trip_id == "LL-0-1" & origin_file == "stop_times")
-  ]
+  # generate figures depending on the variable
   
   measures <- c("CMATT60", "CMAET60", "CMASB60")
   
@@ -991,6 +1022,29 @@ create_diff_maps <- function(access_diff_abs, access_diff_rel, grid_path) {
         scales::label_number()
       }
       
+      # legend bar depends on the city, because goi has negative differences and
+      # for doesn't
+      
+      if (city == "for") {
+        pal <- "PuBu"
+        lim_abs <- NULL
+        lim_rel <- NULL
+      } else if (city == "goi") {
+        pal <- "RdBu"
+        
+        max_diff_abs <- max(
+          access_diff[type == "abs"][[relevant_var]],
+          na.rm = TRUE
+        )
+        lim_abs <- c(-1, 1) * max_diff_abs
+        
+        max_diff_rel <- max(
+          access_diff[type == "rel"][[relevant_var]],
+          na.rm = TRUE
+        )
+        lim_rel <- c(-1, 1) * max_diff_rel
+      }
+      
       # absolute difference
       
       abs_plot <- ggplot() +
@@ -1007,10 +1061,11 @@ create_diff_maps <- function(access_diff_abs, access_diff_rel, grid_path) {
         geom_sf(data = city_shape, fill = NA) +
         scale_fill_distiller(
           name = "Acessibilidade",
-          palette = "PuBu",
+          palette = pal,
           label = label_func,
-          n.breaks = 4,
-          direction = 1
+          #n.breaks = 4,
+          direction = 1,
+          limits = lim_abs
         ) +
         labs(subtitle = "Dif. absoluta") +
         diff_map_theme
@@ -1031,10 +1086,11 @@ create_diff_maps <- function(access_diff_abs, access_diff_rel, grid_path) {
         geom_sf(data = city_shape, fill = NA) +
         scale_fill_distiller(
           name = "Acessibilidade",
-          palette = "PuBu",
-          n.breaks = 4,
+          palette = pal,
+          #n.breaks = 4,
           direction = 1,
-          labels = scales::percent_format()
+          labels = scales::percent_format(),
+          limits = lim_rel
         ) +
         labs(subtitle = "Dif. relativa") +
         diff_map_theme
@@ -1043,7 +1099,11 @@ create_diff_maps <- function(access_diff_abs, access_diff_rel, grid_path) {
       
       plot <- abs_plot | rel_plot
       
-      dir_path <- file.path("../../data/avaliacao_intervencoes/for/figures")
+      dir_path <- file.path(
+        "../../data/avaliacao_intervencoes",
+        city,
+        "figures"
+      )
       if (!dir.exists(dir_path)) dir.create(dir_path)
       
       dir_path <- file.path(dir_path, "map_difference")

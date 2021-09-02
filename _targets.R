@@ -124,8 +124,20 @@ list(
     ),
     pattern = map(access_metadata, grid_path),
     format = "file"
+  ),
+  tar_target(
+    difference_maps,
+    create_diff_maps(
+      both_cities, 
+      transit_access_diff_abs,
+      transit_access_diff_rel,
+      grid_path
+    ),
+    pattern = map(
+      both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
+    )
   )
-  
+
   
   
   
