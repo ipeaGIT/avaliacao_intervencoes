@@ -48,12 +48,18 @@ transit_ttm <- function(city, scenario, graph, points_path) {
   points <- fread(points_path)
   setnames(points, c("id", "lon", "lat"))
   
+  departure <- ifelse(
+    city == "for",
+    "02-03-2020 06:00:00",
+    "02-10-2019 06:00:00"
+  )
+  
   ttm <- travel_time_matrix(
     r5r_core,
     origins = points,
     destinations = points,
     mode = c("WALK", "TRANSIT"),
-    departure_datetime = as.POSIXct("02-03-2020 06:00:00", format = "%d-%m-%Y %H:%M:%S"),
+    departure_datetime = as.POSIXct(departure, format = "%d-%m-%Y %H:%M:%S"),
     time_window = 120L,
     max_trip_duration = 180L,
     max_walk_dist = 1000,
@@ -446,7 +452,7 @@ calculate_accessibility <- function(city,
 
 
 # city <- "for"
-# access_paths <- tar_read(grouped_metadata)$access_file[1:2]
+# access_paths <- tar_read(access_metadata)$access_file[1:2]
 # method <- "absolute"
 calculate_access_diff <- function(city,
                                   access_paths,
@@ -769,52 +775,78 @@ calculate_palma <- function(access_diff, relevant_var) {
 }
 
 
-# access_antes <- tar_read(accessibility_antes)
-# access_depois <- tar_read(accessibility_depois)
-# grid_path <- tar_read(grid_path)
+# city <- "for"
+# access_paths <- tar_read(access_metadata)$access_file[1:2]
+# grid_path <- tar_read(grid_path)[1]
 # measure <- "CMATT60"
-create_dist_maps <- function(access_antes, access_depois, grid_path) {
+create_dist_maps <- function(city, access_paths, grid_path) {
   
-  access_antes <- readRDS(access_antes)
-  access_depois <- readRDS(access_depois)
+  access <- lapply(access_paths, readRDS)
+  names(access) <- c("Antes", "Depois")
   grid <- setDT(readRDS(grid_path))
   
   # join accessibility difference datasets to create a faceted chart
   
-  access <- rbind(
-    Antes = access_antes,
-    Depois = access_depois,
-    idcol = "type"
-  )
+  access <- rbindlist(access, idcol = "type")
   access[
     grid,
     on = c(fromId = "id_hex"),
     `:=`(geometry = i.geometry, decil = i.decil)
   ]
   
-  # download city and transit routes shapes
+  # download city and transit routes shapes, depending on the city
   
-  city_shape <- geobr::read_municipality(2304400)
+  city_code <- ifelse(city == "for", 2304400, 5208707)
+  city_shape <- geobr::read_municipality(city_code)
   
-  gtfs <-  gtfstools::read_gtfs("../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_new.zip")
-  desired_trips <- gtfs$trips[
-    gtfs$routes,
-    on = "route_id",
-    `:=`(route_id = i.route_id, route_long_name = i.route_long_name)
-  ]
-  desired_trips <- desired_trips[
-    desired_trips[, .I[1], by = route_long_name]$V1
-  ]
-  desired_trips <- desired_trips$trip_id
+  if (city == "for") {
+    
+    gtfs <-  gtfstools::read_gtfs(
+      "../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_new.zip"
+    )
+    desired_trips <- gtfs$trips[
+      gtfs$routes,
+      on = "route_id",
+      `:=`(route_id = i.route_id, route_long_name = i.route_long_name)
+    ]
+    desired_trips <- desired_trips[
+      desired_trips[, .I[1], by = route_long_name]$V1
+    ]
+    desired_trips <- desired_trips$trip_id
+    
+    transit_shapes <- gtfstools::get_trip_geometry(
+      gtfs,
+      trip_id = desired_trips
+    )
+    transit_shapes <- setDT(transit_shapes)[
+      !(trip_id == "LL-0-1" & origin_file == "stop_times")
+    ]
+    
+  } else if (city == "goi") {
+    
+    gtfs <- gtfstools::read_gtfs(
+      "../../data/avaliacao_intervencoes/r5/graph/goi_depois/gtfs_goi_rmtc_2019-10_depois.zip"
+    )
+    
+    desired_trips <- gtfs$trips[
+      gtfs$routes,
+      on = "route_id",
+      `:=`(route_id = i.route_id)
+    ]
+    desired_trips <- desired_trips[grepl("BRT", route_id)]
+    desired_trips <- desired_trips[desired_trips[, .I[1], by = shape_id]$V1]
+    desired_trips <- desired_trips$trip_id
+    
+    transit_shapes <- gtfstools::get_trip_geometry(
+      gtfs,
+      trip_id = desired_trips,
+      file = "shapes"
+    )
+    
+  }
   
-  transit_shapes <- gtfstools::get_trip_geometry(
-    gtfs,
-    trip_id = desired_trips
-  )
-  transit_shapes <- setDT(transit_shapes)[
-    !(trip_id == "LL-0-1" & origin_file == "stop_times")
-  ]
-  
+  # generate figures for each of our desired variables
+
   measures <- c("CMATT60", "CMAET60", "CMASB60")
   
   paths <- vapply(
@@ -860,7 +892,11 @@ create_dist_maps <- function(access_antes, access_depois, grid_path) {
           panel.grid = element_blank()
         )
       
-      dir_path <- file.path("../../data/avaliacao_intervencoes/for/figures")
+      dir_path <- file.path(
+        "../../data/avaliacao_intervencoes",
+        city,
+        "figures"
+      )
       if (!dir.exists(dir_path)) dir.create(dir_path)
       
       dir_path <- file.path(dir_path, "map_distribution")

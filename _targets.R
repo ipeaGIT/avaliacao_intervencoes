@@ -114,6 +114,16 @@ list(
     ),
     pattern = map(access_metadata),
     format = "file"
+  ),
+  tar_target(
+    distribution_maps,
+    create_dist_maps(
+      access_metadata$city[1],
+      access_metadata$access_file,
+      grid_path
+    ),
+    pattern = map(access_metadata, grid_path),
+    format = "file"
   )
   
   
