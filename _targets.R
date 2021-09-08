@@ -41,6 +41,16 @@ list(
     pattern = map(both_cities)
   ),
   tar_target(
+    bike_parks_path,
+    paste0(
+      "../../data/avaliacao_intervencoes/r5/points/bike_parks_",
+      only_for, "_", before_after,
+      ".csv"
+    ),
+    pattern = cross(only_for, before_after),
+    format = "file"
+  ),
+  tar_target(
     grid_path,
     paste0(
       "../../data/acesso_oport/hex_agregados/2019/hex_agregado_",
@@ -136,23 +146,53 @@ list(
     pattern = map(
       both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
     )
+  ),
+  tar_target(
+    bike_matrix,
+    bike_ttm(only_for, before_after, graph, points_path),
+    pattern = cross(
+      map(only_for, head(points_path, 1)),
+      map(before_after, head(graph, 2))
+    ),
+    format = "file"
+  ),
+  tar_target(
+    bike_first_mile_matrix,
+    bfm_ttm(only_for, before_after, graph, points_path, bike_parks_path),
+    pattern = cross(
+      map(only_for, head(points_path, 1)),
+      map(before_after, head(graph, 2), bike_parks_path)
+    ),
+    format = "file"
+  ),
+  tar_target(
+    full_matrix,
+    join_ttms(
+      only_for,
+      before_after,
+      bike_matrix,
+      transit_matrix,
+      bike_first_mile_matrix,
+      points_path
+    ),
+    pattern = cross(
+      map(only_for, head(points_path, 1)),
+      map(
+        before_after,
+        bike_matrix,
+        head(transit_matrix, 2),
+        bike_first_mile_matrix
+      )
+    ),
+    format = "file"
   )
+  
 
   
   
   
   
   
-  # tar_target(
-  #   points_path,
-  #   "../../data/avaliacao_intervencoes/r5/points/points_for_09_2019.csv",
-  #   format = "file"
-  # ),
-  # tar_target(
-  #   grid_path,
-  #   "../../data/acesso_oport/hex_agregados/2019/hex_agregado_for_09_2019.rds",
-  #   format = "file"
-  # ),
   # tar_target(
   #   exploratory_skeleton,
   #   "rmarkdown/exploratory_skeleton.Rmd",
@@ -167,46 +207,6 @@ list(
   #   unlist = FALSE,
   #   values = list(scenario = c("antes", "depois")),
   #   tar_target(
-  #     graph,
-  #     paste0("../../data/avaliacao_intervencoes/r5/graph/for_", scenario),
-  #     format = "file"
-  #   ),
-  #   tar_target(
-  #     bike_parks_path,
-  #     paste0(
-  #       "../../data/avaliacao_intervencoes/r5/points/bike_parks_for_",
-  #       scenario,
-  #       ".csv"
-  #     ),
-  #     format = "file"
-  #   ),
-  #   tar_target(
-  #     bike_matrix,
-  #     bike_ttm(scenario, graph, points_path),
-  #     format = "file"
-  #   ),
-  #   tar_target(
-  #     transit_matrix,
-  #     transit_ttm(scenario, graph, points_path),
-  #     format = "file"
-  #   ),
-  #   tar_target(
-  #     bike_first_mile_matrix,
-  #     bfm_ttm(scenario, graph, points_path, bike_parks_path),
-  #     format = "file"
-  #   ),
-  #   tar_target(
-  #     full_matrix,
-  #     join_ttms(
-  #       scenario,
-  #       bike_matrix,
-  #       transit_matrix,
-  #       bike_first_mile_matrix,
-  #       points_path
-  #     ),
-  #     format = "file"
-  #   ),
-  #   tar_target(
   #     exploratory_analysis,
   #     exploratory_report(
   #       full_matrix,
@@ -217,31 +217,6 @@ list(
   #     ),
   #     format = "file"
   #   ),
-  #   tar_target(
-  #     accessibility,
-  #     calculate_accessibility(
-  #       scenario,
-  #       full_matrix,
-  #       grid_path
-  #     ),
-  #     format = "file"
-  #   )
-  # ),
-  # tar_target(
-  #   accessibility_diff_abs,
-  #   calculate_access_diff(
-  #     c(accessibility_antes, accessibility_depois),
-  #     method = "absolute"
-  #   ),
-  #   format = "file"
-  # ),
-  # tar_target(
-  #   accessibility_diff_rel,
-  #   calculate_access_diff(
-  #     c(accessibility_antes, accessibility_depois),
-  #     method = "relative"
-  #   ),
-  #   format = "file"
   # ),
   # tar_target(
   #   scenario_analysis,
@@ -253,19 +228,4 @@ list(
   #   ),
   #   format = "file"
   # ),
-  # tar_target(
-  #   boxplot_charts,
-  #   create_boxplots(accessibility_diff_abs, accessibility_diff_rel, grid_path),
-  #   format = "file"
-  # ),
-  # tar_target(
-  #   distribution_maps,
-  #   create_dist_maps(accessibility_antes, accessibility_depois, grid_path),
-  #   format = "file"
-  # ),
-  # tar_target(
-  #   difference_maps,
-  #   create_diff_maps(accessibility_diff_abs, accessibility_diff_rel, grid_path),
-  #   format = "file"
-  # )
 )

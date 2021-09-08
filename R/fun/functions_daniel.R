@@ -1,4 +1,8 @@
-bike_ttm <- function(scenario, graph, points_path) {
+# city <- tar_read(only_for)
+# scenario <- tar_read(before_after)[1]
+# graph <- tar_read(graph)[1]
+# points_path <- tar_read(points_path)[1]
+bike_ttm <- function(city, scenario, graph, points_path) {
   
   r5r_core <- setup_r5(graph, use_elevation = TRUE)
   
@@ -25,8 +29,7 @@ bike_ttm <- function(scenario, graph, points_path) {
   # save object and return path
   
   dir_path <- file.path(
-    "../../data/avaliacao_intervencoes/for/ttmatrix",
-    scenario
+    "../../data/avaliacao_intervencoes", city, "ttmatrix", scenario
   )
   if (!dir.exists(dir_path)) dir.create(dir_path)
   
@@ -82,14 +85,12 @@ transit_ttm <- function(city, scenario, graph, points_path) {
 }
 
 
-# Outra: provavelmente teria que usar o bike_parks_path antes e depois porque as
-# novas estações vão ter bicicletários
-#
-# scenario <- "antes"
-# graph <- tar_read(graph_antes)
-# points_path <- tar_read(points_path)
-# bike_parks_path <- tar_read(bike_parks_path_antes)
-bfm_ttm <- function(scenario, graph, points_path, bike_parks_path) {
+# city <- tar_read(only_for)
+# scenario <- tar_read(before_after)[1]
+# graph <- tar_read(graph)[1]
+# points_path <- tar_read(points_path)[1]
+# bike_parks_path <- tar_read(bike_parks_path)[1]
+bfm_ttm <- function(city, scenario, graph, points_path, bike_parks_path) {
   
   r5r_core <- setup_r5(graph, use_elevation = TRUE)
   
@@ -188,8 +189,7 @@ bfm_ttm <- function(scenario, graph, points_path, bike_parks_path) {
   # save object and return path
   
   dir_path <- file.path(
-    "../../data/avaliacao_intervencoes/for/ttmatrix",
-    scenario
+    "../../data/avaliacao_intervencoes", city, "ttmatrix", scenario
   )
   if (!dir.exists(dir_path)) dir.create(dir_path)
   
@@ -201,12 +201,14 @@ bfm_ttm <- function(scenario, graph, points_path, bike_parks_path) {
 }
 
 
-# scenario <- "antes"
-# bike_matrix_path <- tar_read(bike_matrix_antes)
-# transit_matrix_path <- tar_read(transit_matrix_antes)
-# bfm_matrix_path <- tar_read(bike_first_mile_matrix_antes)
-# points_path <- tar_read(points_path)
-join_ttms <- function(scenario,
+# city <- tar_read(only_for)
+# scenario <- tar_read(before_after)[1]
+# bike_matrix_path <- tar_read(bike_matrix)[1]
+# transit_matrix_path <- tar_read(transit_matrix)[1]
+# bfm_matrix_path <- tar_read(bike_first_mile_matrix)[1]
+# points_path <- tar_read(points_path)[1]
+join_ttms <- function(city,
+                      scenario,
                       bike_matrix_path,
                       transit_matrix_path,
                       bfm_matrix_path,
@@ -228,8 +230,7 @@ join_ttms <- function(scenario,
   # save object and return path
   
   dir_path <- file.path(
-    "../../data/avaliacao_intervencoes/for/ttmatrix",
-    scenario
+    "../../data/avaliacao_intervencoes", city, "ttmatrix", scenario
   )
   if (!dir.exists(dir_path)) dir.create(dir_path)
   
@@ -544,7 +545,7 @@ calculate_access_diff <- function(city,
 
 # access_paths <- list(tar_read(accessibility_antes), tar_read(accessibility_depois))
 # access_diff_path <- tar_read(accessibility_diff_abs)
-# grid_path <- tar_read(grid_path)
+# grid_path <- tar_read(grid_path)[1]
 # analysis_skeleton <- tar_read(analysis_skeleton)
 # type <- "CMATT60"
 analyse_scenarios <- function(access_paths,
