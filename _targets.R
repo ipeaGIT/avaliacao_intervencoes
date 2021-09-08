@@ -30,6 +30,14 @@ list(
     before_after,
     c("antes", "depois")
   ),
+  tar_files(
+    exploratory_skeleton,
+    c("rmarkdown/exploratory_skeleton.Rmd")
+  ),
+  tar_files(
+    analysis_skeleton,
+    c("rmarkdown/scenario_analysis.Rmd")
+  ),
   tar_target(
     points_path,
     paste0(
@@ -185,6 +193,39 @@ list(
       )
     ),
     format = "file"
+  ),
+  tar_target(
+    full_access,
+    calculate_accessibility(
+      only_for,
+      before_after,
+      full_matrix,
+      grid_path
+    ),
+    pattern = map(
+      full_matrix,
+      cross(map(only_for, head(grid_path, 1)), before_after)
+    ),
+    format = "file"
+  ),
+  tar_target(
+    exploratory_analysis,
+    exploratory_report(
+      only_for,
+      full_matrix,
+      before_after,
+      bike_parks_path,
+      grid_path,
+      exploratory_skeleton
+    ),
+    pattern = map(
+      full_matrix,
+      cross(
+        map(only_for, head(grid_path, 1), exploratory_skeleton),
+        map(before_after, bike_parks_path)
+      )
+    ),
+    format = "file"
   )
   
 
@@ -192,17 +233,7 @@ list(
   
   
   
-  
-  # tar_target(
-  #   exploratory_skeleton,
-  #   "rmarkdown/exploratory_skeleton.Rmd",
-  #   format = "file"
-  # ),
-  # tar_target(
-  #   analysis_skeleton,
-  #   "rmarkdown/scenario_analysis.Rmd",
-  #   format = "file"
-  # ),
+
   # tar_map(
   #   unlist = FALSE,
   #   values = list(scenario = c("antes", "depois")),

@@ -242,12 +242,14 @@ join_ttms <- function(city,
 }
 
 
-# ttm_path <- tar_read(full_matrix_antes)
-# scenario <- "antes"
-# bike_parks_path <- tar_read(bike_parks_path)
-# grid_path <- tar_read(grid_path)
+# city <- tar_read(only_for)
+# ttm_path <- tar_read(full_matrix)[1]
+# scenario <- tar_read(before_after)[1]
+# bike_parks_path <- tar_read(bike_parks_path)[1]
+# grid_path <- tar_read(grid_path)[1]
 # exploratory_skeleton <- tar_read(exploratory_skeleton)
-exploratory_report <- function(ttm_path,
+exploratory_report <- function(city,
+                               ttm_path,
                                scenario,
                                bike_parks_path,
                                grid_path,
@@ -277,7 +279,7 @@ exploratory_report <- function(ttm_path,
   
   # save exploratory analysis report to new folder
   
-  report_dir <- "../../data/avaliacao_intervencoes/for/reports"
+  report_dir <- file.path("../../data/avaliacao_intervencoes", city, "reports")
   if (!dir.exists(report_dir)) dir.create(report_dir)
   
   filename <- normalizePath(
@@ -306,15 +308,15 @@ exploratory_report <- function(ttm_path,
 # scenario <- tar_read(before_after)[1]
 # ttm_path <- tar_read(transit_matrix)[1]
 # grid_path <- tar_read(grid_path)[1]
-# opportunities = c("total_jobs", "total_edu", "basic_health")
+# opportunities <- c("total_jobs", "total_edu", "basic_health")
 #
 # # for special case
 #
-# city <- "for"
+# city <- tar_read(only_for)
 # scenario <- tar_read(before_after)[1]
-# ttm_path <- tar_read(full_matrix_antes)
+# ttm_path <- tar_read(full_matrix)[1]
 # grid_path <- tar_read(grid_path)[1]
-# opportunities = c("total_jobs", "total_edu", "basic_health")
+# opportunities <- c("total_jobs", "total_edu", "basic_health")
 calculate_accessibility <- function(city,
                                     scenario,
                                     ttm_path,
