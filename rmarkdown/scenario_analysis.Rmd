@@ -68,9 +68,9 @@ create_plot <- function(var) {
   palma <- format(palma, digits = 4)
   
   y_ceiling <- fcase(
-    type == "CMATT60", 40000,
-    type == "CMAET60", 10,
-    type == "CMASB60", 10
+    type == "CMATT60", 70000,
+    type == "CMAET60", 50,
+    type == "CMASB60", 15
   )
   
   boxplot_diff <- access_diff[decil > 0]

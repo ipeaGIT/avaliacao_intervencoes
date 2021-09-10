@@ -545,12 +545,14 @@ calculate_access_diff <- function(city,
 }
 
 
-# access_paths <- list(tar_read(accessibility_antes), tar_read(accessibility_depois))
-# access_diff_path <- tar_read(accessibility_diff_abs)
+# city <- tar_read(only_for)
+# access_paths <- tar_read(full_access)
+# access_diff_path <- tar_read(full_access_diff_abs)
 # grid_path <- tar_read(grid_path)[1]
 # analysis_skeleton <- tar_read(analysis_skeleton)
 # type <- "CMATT60"
-analyse_scenarios <- function(access_paths,
+analyse_scenarios <- function(city,
+                              access_paths,
                               access_diff_path,
                               grid_path,
                               analysis_skeleton) {

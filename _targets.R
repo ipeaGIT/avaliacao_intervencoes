@@ -252,23 +252,26 @@ list(
       )
     ),
     format = "file"
+  ),
+  tar_target(
+    full_access_diff_abs,
+    calculate_access_diff(
+      only_for,
+      full_access,
+      method = "absolute"
+    ),
+    format = "file"
+  ),
+  tar_target(
+    scenario_analysis,
+    analyse_scenarios(
+      only_for,
+      full_access,
+      full_access_diff_abs,
+      grid_path,
+      analysis_skeleton
+    ),
+    pattern = head(grid_path, 1),
+    format = "file"
   )
-  
-
-  
-  
-  
-  
-
-
-  # tar_target(
-  #   scenario_analysis,
-  #   analyse_scenarios(
-  #     list(accessibility_antes, accessibility_depois),
-  #     accessibility_diff_abs,
-  #     grid_path,
-  #     analysis_skeleton
-  #   ),
-  #   format = "file"
-  # ),
 )
