@@ -165,7 +165,21 @@ list(
     ),
     pattern = map(
       both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
-    )
+    ),
+    format = "file"
+  ),
+  tar_target(
+    difference_boxplot,
+    create_boxplots(
+      both_cities, 
+      transit_access_diff_abs,
+      transit_access_diff_rel,
+      grid_path
+    ),
+    pattern = map(
+      both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
+    ),
+    format = "file"
   ),
   tar_target(
     bike_matrix,
@@ -246,21 +260,7 @@ list(
   
   
 
-  # tar_map(
-  #   unlist = FALSE,
-  #   values = list(scenario = c("antes", "depois")),
-  #   tar_target(
-  #     exploratory_analysis,
-  #     exploratory_report(
-  #       full_matrix,
-  #       scenario,
-  #       bike_parks_path,
-  #       grid_path,
-  #       exploratory_skeleton
-  #     ),
-  #     format = "file"
-  #   ),
-  # ),
+
   # tar_target(
   #   scenario_analysis,
   #   analyse_scenarios(

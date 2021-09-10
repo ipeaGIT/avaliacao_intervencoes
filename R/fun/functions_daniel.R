@@ -626,11 +626,12 @@ analyse_scenarios <- function(access_paths,
 }
 
 
-# access_diff_abs <- tar_read(accessibility_diff_abs)
-# access_diff_rel <- tar_read(accessibility_diff_rel)
-# grid_path <- tar_read(grid_path)
+# city <- tar_read(both_cities)[1]
+# access_diff_abs <- tar_read(transit_access_diff_abs)[1]
+# access_diff_rel <- tar_read(transit_access_diff_rel)[1]
+# grid_path <- tar_read(grid_path)[1]
 # measure <- "CMATT60"
-create_boxplots <- function(access_diff_abs, access_diff_rel, grid_path) {
+create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
   
   access_diff_abs <- readRDS(access_diff_abs)
   access_diff_rel <- readRDS(access_diff_rel)
@@ -656,30 +657,41 @@ create_boxplots <- function(access_diff_abs, access_diff_rel, grid_path) {
     FUN = function(measure) {
       relevant_var <- paste0("only_transit_", measure)
       
-      abs_ceiling <- fcase(
-        measure == "CMATT60", 30000,
-        measure == "CMAET60", 8,
-        measure == "CMASB60", 5
-      )
-      rel_ceiling <- fcase(
-        measure == "CMATT60", 0.1,
-        measure == "CMAET60", 0.05,
-        measure == "CMASB60", 0.05
-      )
+      if (city == "for") {
+        
+        abs_ceiling <- fcase(
+          measure == "CMATT60", 70000,
+          measure == "CMAET60", 30,
+          measure == "CMASB60", 12
+        )
+        rel_ceiling <- fcase(
+          measure == "CMATT60", 0.2,
+          measure == "CMAET60", 0.12,
+          measure == "CMASB60", 0.2
+        )
+        
+      } else if (city == "goi") {
+        
+        abs_ceiling <- fcase(
+          measure == "CMATT60", 30000,
+          measure == "CMAET60", 8,
+          measure == "CMASB60", 5
+        )
+        rel_ceiling <- fcase(
+          measure == "CMATT60", 0.1,
+          measure == "CMAET60", 0.05,
+          measure == "CMASB60", 0.05
+        )
+        
+      }
       
       boxplot_theme <- theme_minimal() +
         theme(
           axis.text.x = element_blank(),
           panel.grid = element_blank(),
           plot.subtitle = element_markdown(),
-          # legend.text = element_text(size = 5),
           legend.position = "bottom",
           legend.text.align = 0.5
-          # axis.text.y = element_text(size = 6),
-          # axis.title.x = element_text(size = 7),
-          # axis.title.y = element_text(size = 7, face="bold"),
-          # legend.title = element_text(size = 7)
-          # 
         )
       
       # absolute difference
@@ -743,7 +755,11 @@ create_boxplots <- function(access_diff_abs, access_diff_rel, grid_path) {
       plot <- (abs_plot / rel_plot) +
         plot_layout(heights = c(1, 1))
       
-      dir_path <- file.path("../../data/avaliacao_intervencoes/for/figures")
+      dir_path <- file.path(
+        "../../data/avaliacao_intervencoes",
+        city,
+        "figures"
+      )
       if (!dir.exists(dir_path)) dir.create(dir_path)
       
       dir_path <- file.path(dir_path, "boxplot_difference")
