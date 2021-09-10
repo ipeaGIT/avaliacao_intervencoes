@@ -805,7 +805,7 @@ create_dist_maps <- function(city, access_paths, grid_path) {
   if (city == "for") {
     
     gtfs <-  gtfstools::read_gtfs(
-      "../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_new.zip"
+      "../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_depois.zip"
     )
     desired_trips <- gtfs$trips[
       gtfs$routes,
@@ -953,7 +953,7 @@ create_diff_maps <- function(city, access_diff_abs, access_diff_rel, grid_path) 
   if (city == "for") {
     
     gtfs <-  gtfstools::read_gtfs(
-      "../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_new.zip"
+      "../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_depois.zip"
     )
     desired_trips <- gtfs$trips[
       gtfs$routes,

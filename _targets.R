@@ -30,13 +30,25 @@ list(
     before_after,
     c("antes", "depois")
   ),
-  tar_files(
-    exploratory_skeleton,
-    c("rmarkdown/exploratory_skeleton.Rmd")
+  tar_target(
+    exploratory_skeleton_file,
+    "rmarkdown/exploratory_skeleton.Rmd"
   ),
-  tar_files(
+  tar_target(
+    exploratory_skeleton,
+    exploratory_skeleton_file,
+    pattern = map(exploratory_skeleton_file),
+    format = "file"
+  ),
+  tar_target(
+    analysis_skeleton_file,
+    "rmarkdown/scenario_analysis.Rmd"
+  ),
+  tar_target(
     analysis_skeleton,
-    c("rmarkdown/scenario_analysis.Rmd")
+    analysis_skeleton_file,
+    pattern = map(analysis_skeleton_file),
+    format = "file"
   ),
   tar_target(
     points_path,
