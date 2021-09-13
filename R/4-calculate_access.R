@@ -16,8 +16,8 @@ calcular_acess_muni <- function(sigla_muni, modo_acesso) {
   # 1) Abrir tttmatrix ---------------------------------------------------
   
   
-  ttmatrix_median <- read_rds(sprintf("../../data/avaliacao_intervencoes/ttmatrix/ttmatrix_%s_%s.rds",
-                                      sigla_muni, modo_acesso))
+  ttmatrix_median <- read_rds(sprintf("../../data/avaliacao_intervencoes/%s/ttmatrix/ttmatrix_%s_%s.rds",
+                                      sigla_muni, sigla_muni, modo_acesso))
   
   
   
@@ -55,7 +55,7 @@ calcular_acess_muni <- function(sigla_muni, modo_acesso) {
                                              # variaveis de populacao - cor
                                              pop_total, cor_branca, cor_amarela, cor_indigena, cor_negra, 
                                              # variaveis de populacao - idade
-                                             matches("idade_"),
+                                             # matches("idade_"),
                                              # variaveis de renda
                                              renda_total, renda_capita, quintil, decil) %>% setDT()
   
@@ -70,12 +70,12 @@ calcular_acess_muni <- function(sigla_muni, modo_acesso) {
   # Merge dados de origem na matrix de tempo de viagem
   ttmatrix <- ttmatrix_median[hex_orig, on = c("origin" = "id_hex"),  
                               c('pop_total','cor_branca','cor_amarela','cor_indigena','cor_negra',
-                                "idade_0a5", "idade_6a14", "idade_15a18", "idade_19a24",    
-                                "idade_25a39", "idade_40a69", "idade_70",
+                                # "idade_0a5", "idade_6a14", "idade_15a18", "idade_19a24",    
+                                # "idade_25a39", "idade_40a69", "idade_70",
                                 'renda_total','renda_capita','quintil','decil') :=
                                 list(i.pop_total, i.cor_branca, i.cor_amarela, i.cor_indigena, i.cor_negra, 
-                                     i.idade_0a5, i.idade_6a14, i.idade_15a18, i.idade_19a24,    
-                                     i.idade_25a39, i.idade_40a69, i.idade_70,    
+                                     # i.idade_0a5, i.idade_6a14, i.idade_15a18, i.idade_19a24,    
+                                     # i.idade_25a39, i.idade_40a69, i.idade_70,    
                                      i.renda_total, i.renda_capita, i.quintil, i.decil)]
   
   # Merge dados de destino na matrix de tempo de viagem
@@ -225,7 +225,7 @@ calcular_acess_muni <- function(sigla_muni, modo_acesso) {
   
   # 8) Salvar output --------------------------------------
   
-  path_out <- sprintf("../../data/avaliacao_intervencoes/output_access/acess_%s_%s.rds", sigla_muni, tolower(modo_acesso))
+  path_out <- sprintf("../../data/avaliacao_intervencoes/%s/output_access/acess_%s_%s.rds", sigla_muni, sigla_muni, tolower(modo_acesso))
   write_rds(acess_sf, path_out)
   
   
@@ -235,3 +235,5 @@ calcular_acess_muni <- function(sigla_muni, modo_acesso) {
 
 calcular_acess_muni("for", "WALK")
 calcular_acess_muni("for", "BICYCLE")
+
+calcular_acess_muni("goi", "WALK")

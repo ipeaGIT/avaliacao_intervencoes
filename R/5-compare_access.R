@@ -1,6 +1,7 @@
 
 source("../acesso_oport/R/fun/setup.R")
 library(ggnewscale)
+library(BAMMtools) # fast calculation of jenks natural breaks
 
 theme_mapa <- function(base_size) {
   
@@ -22,17 +23,26 @@ theme_mapa <- function(base_size) {
 }
 
 
+# sigla_muni <- "goi"; modo_acesso <- "WALK"
+# sigla_muni <- "for"; modo_acesso <- "WALK"
+
 compare_access <- function(sigla_muni, modo_acesso) {
   
   city_code <- munis_list$munis_df[abrev_muni == sigla_muni]$code_muni
   
+  
+
+
+  # selecionar o shape de intervencao da cidade - para mapa -----------------
+
+  if (sigla_muni == "for") {
   # abrir shape da linha
   linha_leste_shape <- st_read("../../data-raw/avaliacao_intervencoes/for/linha_leste_kaue_gearth.gpkg")
   # abrir outras linhas
-  gtfs <- gtfstools::read_gtfs("../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_new.zip")
+  gtfs <- gtfstools::read_gtfs("../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_depois.zip")
   linhas_shape <- gtfstools::get_trip_geometry(gtfs) %>%
-    left_join(gtfs$trips %>% select(trip_id, route_id), by = "trip_id") %>%
-    left_join(gtfs$routes %>% select(route_id, route_long_name), by = "route_id") %>%
+    left_join(gtfs$trips %>%  dplyr::select(trip_id, route_id), by = "trip_id") %>%
+    left_join(gtfs$routes %>% dplyr::select(route_id, route_long_name), by = "route_id") %>%
     filter(!(route_id == "LL" & origin_file == "stop_times")) %>%
     count(route_long_name)
   
@@ -51,13 +61,27 @@ compare_access <- function(sigla_muni, modo_acesso) {
                                         route_long_name == "VLT Parangaba Papicu" ~ "VLT",
                                         TRUE ~ route_long_name ))
   
+  } else if (sigla_muni == "goi") {
+    
+    gtfs <- gtfstools::read_gtfs("../../data/avaliacao_intervencoes/r5/graph/goi_depois/gtfs_goi_rmtc_2019-10_depois.zip")
+    
+    linhas_shape <- gtfstools::get_trip_geometry(gtfs, file = c("shapes")) %>% setDT()
+    linhas_shape <- merge(linhas_shape, gtfs$trips[, .(trip_id, route_id)], by = "trip_id")
+    linhas_shape <- merge(linhas_shape, gtfs$routes[, .(route_id, route_long_name)], by = "route_id")
+    linhas_shape <- linhas_shape[route_id %like% "BRT"]
+    linhas_shape <- distinct(linhas_shape, route_id, geometry) %>% st_sf()
+      
+    
+    
+  }
+  
   
   # abrir city limits
   city_shape <- geobr::read_municipality(city_code)
   
   
   # abrir access
-  access <- read_rds(sprintf("../../data/avaliacao_intervencoes/output_access/acess_%s_%s.rds", sigla_muni, modo_acesso))
+  access <- read_rds(sprintf("../../data/avaliacao_intervencoes/%s/output_access/acess_%s_%s.rds", sigla_muni, sigla_muni, modo_acesso))
   
   
   # compare each indicator
@@ -68,12 +92,14 @@ compare_access <- function(sigla_muni, modo_acesso) {
     spread(tipo, valor) %>%
     # calculate abs diffs
     mutate(dif_abs = depois - antes,
-           dif_rel = round((depois-antes)/antes, 2)) %>%
+           dif_rel = log(depois/antes)) %>%
+           # dif_rel = round((depois-antes)/antes, 2)) %>%
     st_sf(crs = 4326)
   
   
   
   # variaveiss <- "CMATT60"
+  # variaveiss <- "CMASB60"
   # variaveiss <- "CMASA60" checar os zeros desse indicador
   # TODO: 
   # - criar graficos (boxplot + pontos) com desigualdades
@@ -100,14 +126,42 @@ compare_access <- function(sigla_muni, modo_acesso) {
   fazer_plots_acess_comp <- function(variaveiss) {
     
     
-    
-    labelss <- if (grepl("TT", variaveiss)) ks else label_number(accuracy = 1)
-    
     go <- access_comp %>%
       filter(quintil != 0) %>%
       filter(ind == variaveiss)
     # mutate(dif_abs = ifelse(dif_abs < 0, 0, dif_abs),
     #        dif_rel = ifelse(dif_rel < 0, 0, dif_rel))
+    
+    # classficiar os hex com 0 antes e 0 depois
+    go <- go %>%
+      mutate(dif_rel = ifelse(antes == 0 & depois == 0, 0, dif_rel))
+    
+    dif_abs_trun <- max(abs(quantile(go$dif_abs, 0.05)), abs(quantile(go$dif_abs, 0.97)))
+    dif_rel_trun <- max(abs(quantile(go$dif_rel[go$dif_rel != 0], 0.05, na.rm = TRUE)),
+                        abs(quantile(go$dif_rel[go$dif_rel != 0], 0.95, na.rm = TRUE)))
+
+    go <- go %>%
+      mutate(dif_abs_tc = ifelse(dif_abs < -dif_abs_trun, -dif_abs_trun,
+                             ifelse(dif_abs > dif_abs_trun, dif_abs_trun, dif_abs))) %>%
+      mutate(dif_rel_tc = ifelse(dif_rel < -dif_rel_trun, -dif_rel_trun,
+                             ifelse(dif_rel > dif_rel_trun, dif_rel_trun, dif_rel)))
+
+    # trazer paradas
+    gtfs_stops_antes <- gtfstools::read_gtfs("../../data-raw/gtfs/goi/2019/gtfs_goi_rmtc_2019-10.zip", files = "stops")[[1]]
+    gtfs_stops_antes <- gtfs_stops_antes %>% st_as_sf(coords = c("stop_lon", "stop_lat"), crs = 4326)
+    gtfs_stops_depois <- gtfstools::read_gtfs("../../data/avaliacao_intervencoes/r5/graph/goi_depois/gtfs_goi_rmtc_2019-10_depois.zip", files = "stops")[[1]]
+    gtfs_stops_depois<- gtfs_stops_depois[stop_id %like% "ENS"]
+    gtfs_stops_depois <- gtfs_stops_depois %>% st_as_sf(coords = c("stop_lon", "stop_lat"), crs = 4326)
+
+
+    mapview(go, zcol = "dif_abs_tc", col.regions = RColorBrewer::brewer.pal(10, "RdBu"), col = NULL) + gtfs_stops_depois + linhas_shape
+    # 
+    # acess_teste <- go %>% filter(origin %in% c("89a8c0ccd5bffff", "89a8c0cc897ffff"))
+    # 
+    # 
+    # mapview(go, zcol = "antes") + gtfs_stops_depois
+    # mapview(acess_teste, zcol = "antes")
+    # mapview(acess_teste, zcol = "depois") + gtfs_stops_depois
     
     
     # go %>%
@@ -138,20 +192,40 @@ compare_access <- function(sigla_muni, modo_acesso) {
     
     # transform map elements to UTM
     linhas_shape_map <- st_transform(linhas_shape, 3857)
+    
+    
+    
     city_shape_map <- st_transform(city_shape, 3857)
     go_map <- st_transform(go, 3857)
+    
+    # limits for each indicator
+    limits_ind <- go %>%
+      st_set_geometry(NULL) %>%
+      group_by(ind) %>%
+      summarise(dif_abs = max(abs(dif_abs), na.rm = TRUE),
+                dif_rel = max(abs(dif_rel), na.rm = TRUE),
+                dif_abs_tc = max(abs(dif_abs_tc), na.rm = TRUE),
+                dif_rel_tc = max(abs(dif_rel_tc), na.rm = TRUE)
+                ) %>% setDT()
+    
+    # library(BAMMtools)
+    # library(stringi)
+    # go_map <- jenks_natural(go_map, "dif_abs", 8) %>% st_sf()
     
     # create fun
     create_map_acess <- function(var) {
       
+      
+
+      
       ggplot()+
-        geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
-        coord_equal() +
-        scale_fill_identity()+
-        # nova escala
-        new_scale_fill() +
-        geom_sf(data = go_map, aes(fill = {{ var }} ), color = NA)+
-        geom_sf(data = linhas_shape_map, size = 0.5, alpha = 0.7)+
+        # geom_raster(data = map_tiles, aes(x, y, fill = hex), alpha = 1) +
+        # coord_equal() +
+        # scale_fill_identity()+
+        # # nova escala
+        # new_scale_fill() +
+        geom_sf(data = go_map, aes(fill = {{var}}), color = NA)+
+        geom_sf(data = linhas_shape_map, size = 0.5, alpha = 0.5)+
         # geom_sf(data = linhas_shape, aes(color = route_long_name1), size = 0.5, alpha = 0.7)+
         geom_sf(data= city_shape_map, fill = NA)+
         theme_mapa()
@@ -160,12 +234,18 @@ compare_access <- function(sigla_muni, modo_acesso) {
     
     
     
+    labelss <- if (grepl("CMATT", variaveiss)) ks else label_number(accuracy = 1) 
+      
+    
+    
     # map with access antes
     map1 <- create_map_acess(antes) +
-      scale_fill_viridis_c(labels = labelss, option = "inferno")+
+      scale_fill_viridis_c(labels = labelss, option = "inferno"
+                           )+
       labs(title = "Acessibilidade TP ***antes***",
            # subtitle = variaveiss,
            fill = "")
+    
     
     # map with acess depois
     map2 <- create_map_acess(depois)+
@@ -176,7 +256,7 @@ compare_access <- function(sigla_muni, modo_acesso) {
     
     map3 <- create_map_acess(dif_abs)+
       scale_fill_distiller(palette = "PuBu", direction = 1, labels = labelss
-                           # limits = c(-1,1)*max(abs(go$dif1))
+                           # limits = c(-1,1)*limits_ind$dif_abs_tc
                            # breaks = c(-30000, 0, 30000),
                            # labels = c("-30 mil", 0, "30 mil")
       )+
@@ -184,9 +264,16 @@ compare_access <- function(sigla_muni, modo_acesso) {
            # subtitle = variaveiss,
            fill = "")
     
+    
+    
+    
+    # boxplot(go$dif_abs)
+    # boxplot(go$dif_rel)
+    # mapview(go, zcol = "dif_abs")
+    
     map4 <- create_map_acess(dif_rel)+
       scale_fill_distiller(palette = "PuBu", direction = 1
-                           # limits = c(-1,1)*max(abs(go$dif1))
+                           # limits = c(-1,1)*limits_ind$dif_rel_tc
                            # breaks = c(-30000, 0, 30000),
                            # labels = c("-30 mil", 0, "30 mil")
                            , label = label_percent(accuracy = 1)
@@ -194,6 +281,8 @@ compare_access <- function(sigla_muni, modo_acesso) {
       labs(title = "Diferença ***relativa***",
            # subtitle = variaveiss,
            fill = "")
+    
+    # boxplot(go_map$dif_abs)
     
     
     # arrange plot
@@ -231,7 +320,7 @@ compare_access <- function(sigla_muni, modo_acesso) {
             legend.key.width = unit(0.8, "cm"))
     
     # out
-    filename <- sprintf("figures/%s/access_comparison/map2_comparison_%s_%s_%s", sigla_muni, sigla_muni, modo_acesso, variaveiss)
+    filename <- sprintf("figures/%s/access_comparison/map2_comparisonn_%s_%s_%s", sigla_muni, sigla_muni, modo_acesso, variaveiss)
     ggsave(plot = plot_comparison, filename = paste0(filename, ".png"),
            height = 10, width = 16,
            # height = 14, width = 16,
@@ -257,7 +346,7 @@ compare_access <- function(sigla_muni, modo_acesso) {
     
     # calcular palma ratio
     acess_palma <- go_long %>%
-      select(city, decil, pop_total, tipo_indicador, valor_indicador) %>%
+      dplyr::select(city, decil, pop_total, tipo_indicador, valor_indicador) %>%
       # pegar so decis 4 e 9
       filter(decil %in% c(1, 2, 3, 4, 10)) %>%
       # definir ricos e pobres
@@ -440,7 +529,7 @@ compare_access <- function(sigla_muni, modo_acesso) {
   }
   
   # variaveis <- grep(pattern = "TT|ET|EI|EF|EM|ST|SB|SM|SA", x = colnames(access), value = TRUE)
-  variaveis <- c("CMATT60", "CMAET60", "CMASB60", "CMASM60", "CMAEI60", "CMAEF60", "CMAEM60")
+  variaveis <- c("CMATT60", "CMAET60", "CMASB60")
   
   lapply(variaveis, fazer_plots_acess_comp)
   
@@ -456,3 +545,4 @@ compare_access <- function(sigla_muni, modo_acesso) {
 compare_access('for', "WALK")
 compare_access('for', "BICYCLE")
 
+compare_access('goi', "WALK")

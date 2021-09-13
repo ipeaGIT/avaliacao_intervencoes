@@ -14,6 +14,8 @@ sfc_as_cols <- function(x, names = c("lon","lat")) {
 get.dist <- function(lon, lat) geosphere::distHaversine(tail(cbind(lon,lat),-1), head(cbind(lon,lat),-1))
 
 
+# line_shape <- line_shape_routes
+
 
 line_to_shapes <- function(line_shape) {
   

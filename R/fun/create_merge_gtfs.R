@@ -33,8 +33,12 @@ create_merge_gtfs <- function(gtfs,
     
     # get service with most date intervals
     service_id1[, interval := paste0(start_date, "-", end_date)]
-    service_id1[, .N, by = interval]
-    setorder(service_id1, -N)
+    service_id_n <- service_id1[, .N, by = interval]
+    setorder(service_id_n, -N)
+    # selecte the firs obs - interval
+    interval1 <- service_id_n[1,1]
+    # now filter the interval
+    service_id1 <- service_id1[interval == interval1]$service_id[1]
     
     if (length(service_id1) == 0) {
       
@@ -203,11 +207,18 @@ create_merge_gtfs <- function(gtfs,
     st_transform(crs = 4326) %>%
     sfc_as_cols() %>% setDT()
   
-  # create location type
-  stops[, location_type := 0]
-  
   # select variables
-  stops <- stops[, .(stop_id, stop_name, stop_lat = lat, stop_lon = lon, location_type)]
+  if ("location_type" %in% colnames(stops))  {
+    
+    
+    stops <- stops[, .(stop_id, stop_name, stop_lat = lat, stop_lon = lon, location_type, parent_station)]
+    
+  } else {
+    
+    stops <- stops[, .(stop_id, stop_name, stop_lat = lat, stop_lon = lon)]
+    
+  }
+ 
   
   
   
@@ -253,7 +264,7 @@ create_merge_gtfs <- function(gtfs,
                    shapes = shapes)
   
   # we need to identify it as 'dt_gtfs' class so it can match with the original gtfs
-  class(gtfs_new) <- 'dt_gtfs'
+  class(gtfs_new) <- c('dt_gtfs', 'gtfs')
   
   # merge the new gtfs with the original gtfs
   gtfs_merge <- gtfstools::merge_gtfs(
@@ -261,6 +272,7 @@ create_merge_gtfs <- function(gtfs,
     gtfs_new
   )
   
+  class(gtfs_merge) <- c('dt_gtfs', 'gtfs')
   return(gtfs_merge)
   
 }
