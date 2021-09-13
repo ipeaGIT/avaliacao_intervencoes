@@ -1,0 +1,118 @@
+---
+output: html_document
+params:
+  access: NA
+  access_diff: NA
+  grid: NA
+  type: NA
+title: "Before and after comparison"
+---
+
+```{r, include = FALSE, message = FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE
+)
+library(ggplot2)
+library(data.table)
+library(sf)
+library(cowplot)
+```
+
+```{r, setup}
+access <- params$access
+access_diff <- params$access_diff
+grid <- params$grid
+type <- params$type
+
+grid <- grid[pop_total > 0 | empregos_total | 0 & saude_baixa | 0 & edu_total > 0]
+
+# bring geometry to be able to create maps
+access[
+  grid,
+  on = c(id = "id_hex"),
+  `:=`(
+    geometry = i.geometry,
+    decil = i.decil
+  )
+]
+access <- access[vapply(geometry, function(i) !is.null(i), logical(1))]
+
+access_diff[
+  grid,
+  on = c(id = "id_hex"),
+  `:=`(
+    pop = i.pop_total,
+    decil = i.decil,
+    geometry = i.geometry
+  )
+]
+access_diff <- access_diff[vapply(geometry, function(i) !is.null(i), logical(1))]
+
+# function that generate plots for each variable
+create_plot <- function(var) {
+  
+  ma <- ggplot(st_as_sf(access)) +
+    geom_sf(aes_string(fill = var), color = NA) +
+    facet_wrap(~ scenario) +
+    scale_fill_viridis_c(option = "inferno")
+
+  md <- ggplot(st_as_sf(access_diff)) +
+    geom_sf(aes_string(fill = var), color = NA) +
+    scale_fill_gradient(low = "white", high = "red")
+  
+  richest_10 <- access_diff[decil == 10]
+  poorest_40 <- access_diff[decil >= 1 & decil <= 4]
+  
+  palma <- weighted.mean(richest_10[[var]], w = richest_10$pop) /
+    weighted.mean(poorest_40[[var]], w = poorest_40$pop)
+  palma <- format(palma, digits = 4)
+  
+  y_ceiling <- fcase(
+    type == "CMATT60", 70000,
+    type == "CMAET60", 50,
+    type == "CMASB60", 15
+  )
+  
+  boxplot_diff <- access_diff[decil > 0]
+  bd <- ggplot(boxplot_diff) +
+    geom_boxplot(
+      aes_string(as.factor(boxplot_diff$decil), var, weight = "pop"),
+      outlier.alpha = 0.25
+    ) +
+    ggtitle(paste0("Palma ratio: ", palma)) +
+    coord_cartesian(ylim = c(0, y_ceiling))
+  
+  final_plot <- plot_grid(
+    ma,
+    plot_grid(md, bd, ncol = 2, rel_widths = c(0.7, 0.3)),
+    nrow = 2
+  )
+  
+  return(final_plot)
+  
+}
+```
+
+## Only transit - 60 min
+
+```{r, warning = FALSE}
+suppressWarnings(
+  print(create_plot("only_transit"))
+)
+```
+
+## Transit + bike
+
+```{r, warning = FALSE}
+suppressWarnings(
+  print(create_plot("transit_bike"))
+)
+```
+
+## Transit + bike + bike first mile to selected stations
+
+```{r, warning = FALSE}
+suppressWarnings(
+  print(create_plot("all_modes"))
+)
+```
