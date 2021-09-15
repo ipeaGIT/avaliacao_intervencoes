@@ -189,7 +189,15 @@ create_dist_maps <- function(city, access_paths, grid_path) {
     `:=`(geometry = i.geometry, decil = i.decil)
   ]
   
-  # download city and transit routes shapes, depending on the city
+  # download basemap and city and transit routes shapes, depending on the city
+  
+  basemap <- readRDS(
+    paste0(
+      "../../data/acesso_oport/maptiles_crop/2019/mapbox/maptile_crop_mapbox_",
+      city,
+      "_2019.rds"
+    )
+  )
   
   city_code <- ifelse(city == "for", 2304400, 5208707)
   city_shape <- geobr::read_municipality(city_code)
@@ -240,6 +248,13 @@ create_dist_maps <- function(city, access_paths, grid_path) {
     
   }
   
+  # transform sf objects' CRS to 3857 so they became "compatible" with the
+  # basemap raster
+  
+  access <- st_transform(st_sf(access), 3857)
+  transit_shapes <- st_transform(st_sf(transit_shapes), 3857)
+  city_shape <- st_transform(city_shape, 3857)
+  
   # generate figures for each of our desired variables
   
   measures <- c("CMATT60", "CMAET60", "CMASB60")
@@ -262,13 +277,17 @@ create_dist_maps <- function(city, access_paths, grid_path) {
       }
       
       plot <- ggplot() +
+        geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        coord_equal() +
+        scale_fill_identity() +
+        ggnewscale::new_scale_fill() +
         geom_sf(
-          data = st_sf(access),
+          data = access,
           aes(fill = get(relevant_var)),
           color = NA
         ) +
         geom_sf(
-          data = st_sf(transit_shapes),
+          data = transit_shapes,
           size = 0.5,
           alpha = 0.7
         ) +
@@ -284,6 +303,7 @@ create_dist_maps <- function(city, access_paths, grid_path) {
         theme(
           legend.position = "bottom",
           axis.text = element_blank(),
+          axis.title = element_blank(),
           panel.grid = element_blank()
         )
       

@@ -79,9 +79,6 @@ exploratory_analysis_2466ad52|branch|82e1f66a0404e5f9|1a951bcc26a031ce|b374fc7b9
 exploratory_analysis_d32426ca|branch|33c745943b2edd69|1a951bcc26a031ce|ecddc7386fdd16b0|-867280306|L:/Proj_acess_oport/data/avaliacao_intervencoes/for/reports/exploratory_analysis_depois.html|t18885.6556828704s|f8be3ca981e085a4|1374684|file|vector|exploratory_analysis||32.68||
 exploratory_analysis|pattern|53014ec8b0363045|1a951bcc26a031ce||-2001890505||||2751054|file|vector||exploratory_analysis_2466ad52*exploratory_analysis_d32426ca|63.6||
 full_access_diff_abs|stem|172a8630547fdb69|e9e1aa68e3ebd717|6d36de1105926757|-131678072|../../data/avaliacao_intervencoes/for/output_access/full_access_diff_absolute.rds|t18885.6556944444s|b23e5f8d5ba78a1c|54442|file|vector|||0.1||
-distribution_maps_ef29f0d7|branch|9275510418eff8ed|ecaeedee91be76a9|a1d2f083b7b9871d|-1779083206|../../data/avaliacao_intervencoes/for/figures/map_distribution/CMATT60.png*../../data/avaliacao_intervencoes/for/figures/map_distribution/CMAET60.png*../../data/avaliacao_intervencoes/for/figures/map_distribution/CMASB60.png|t18885.6570023148s|7d054e4477e7be6a|518145|file|vector|distribution_maps||112.89||
-distribution_maps_e52293ef|branch|4e18a28dee315ef8|ecaeedee91be76a9|f263b603dcda83ba|193054446|../../data/avaliacao_intervencoes/goi/figures/map_distribution/CMATT60.png*../../data/avaliacao_intervencoes/goi/figures/map_distribution/CMAET60.png*../../data/avaliacao_intervencoes/goi/figures/map_distribution/CMASB60.png|t18885.6571412037s|6bb4b1eb4fb9547c|452834|file|vector|distribution_maps||12.67||
-distribution_maps|pattern|0569e25148ea9b33|ecaeedee91be76a9||-1141181583||||970979|file|vector||distribution_maps_ef29f0d7*distribution_maps_e52293ef|125.56||
 transit_access_diff_abs_80384331|branch|d014c93e1df1c2c2|a6a97f283b1f953b|4a4f1ca4c61702c4|-211963347|../../data/avaliacao_intervencoes/for/output_access/transit_access_diff_absolute.rds|t18885.6571412037s|1000f07297c5ea60|18306|file|vector|transit_access_diff_abs||0.05||
 transit_access_diff_abs_4b0c3d23|branch|e273a389dd900a86|a6a97f283b1f953b|11086581cf47b615|1277829104|../../data/avaliacao_intervencoes/goi/output_access/transit_access_diff_absolute.rds|t18885.6571527778s|0159c744f4196dc5|24991|file|vector|transit_access_diff_abs||0.03||
 transit_access_diff_abs|pattern|62ef14089163e8b9|a6a97f283b1f953b||1721896072||||43297|file|vector||transit_access_diff_abs_80384331*transit_access_diff_abs_4b0c3d23|0.08||
@@ -97,12 +94,12 @@ difference_boxplot|pattern|604a3d92a1768112|c501c2b1a0f5fb1e||624006850||||26264
 difference_boxplot_dbf376ce|branch|a5149b8f4db8803d|c501c2b1a0f5fb1e|4ffb1942bcae7066|-151089480|../../data/avaliacao_intervencoes/for/figures/boxplot_difference/CMATT60.png*../../data/avaliacao_intervencoes/for/figures/boxplot_difference/CMAET60.png*../../data/avaliacao_intervencoes/for/figures/boxplot_difference/CMASB60.png|t18885.7795023148s|ccf4c8a6a0fff1e6|129120|file|vector|difference_boxplot||6.11||
 difference_boxplot_2c26282c|branch|92cfeb0b8d14c83c|c501c2b1a0f5fb1e|8c185c8de9e729dc|1630569489|../../data/avaliacao_intervencoes/goi/figures/boxplot_difference/CMATT60.png*../../data/avaliacao_intervencoes/goi/figures/boxplot_difference/CMAET60.png*../../data/avaliacao_intervencoes/goi/figures/boxplot_difference/CMASB60.png|t18885.788587963s|b76034f2d188e5e2|133526|file|vector|difference_boxplot||3.26|Solution may be nonunique|
 bfm_ttm|function|209b123c2e6c00b0||||||||||||||
-create_dist_maps|function|69e8a3b944dd42e9||||||||||||||
+create_dist_maps|function|fd0e23c05e53dfe0||||||||||||||
 create_diff_maps|function|6fd884e2646c619b||||||||||||||
 calculate_palma|function|31687ff9c8676bf5||||||||||||||
 calculate_access_diff|function|e0b1ec5966a58587||||||||||||||
 join_ttms|function|612e3ee44568cd55||||||||||||||
-.Random.seed|object|54c7dd73cf409739||||||||||||||
+.Random.seed|object|7816077fe826ba37||||||||||||||
 create_points_r5|function|aeed5864aacd6641||||||||||||||
 analyse_scenarios|function|d3ba389021173304||||||||||||||
 bike_ttm|function|37069c3032a9ff24||||||||||||||
@@ -110,3 +107,6 @@ transit_ttm|function|04e9b1675bfa884c||||||||||||||
 exploratory_report|function|5d9873cb65ea91a3||||||||||||||
 calculate_accessibility|function|83f362b60ca317df||||||||||||||
 create_boxplots|function|797ac20be3442b98||||||||||||||
+distribution_maps_ef29f0d7|branch|16bb2cd20868a65c|ecaeedee91be76a9|93dbbfd88b8f2ece|-1779083206|../../data/avaliacao_intervencoes/for/figures/map_distribution/CMATT60.png*../../data/avaliacao_intervencoes/for/figures/map_distribution/CMAET60.png*../../data/avaliacao_intervencoes/for/figures/map_distribution/CMASB60.png|t18885.859837963s|15c14c79a0776fdb|1096103|file|vector|distribution_maps||119.03||
+distribution_maps_e52293ef|branch|a07834a73a5d7631|ecaeedee91be76a9|35da17a71fe2bd33|193054446|../../data/avaliacao_intervencoes/goi/figures/map_distribution/CMATT60.png*../../data/avaliacao_intervencoes/goi/figures/map_distribution/CMAET60.png*../../data/avaliacao_intervencoes/goi/figures/map_distribution/CMASB60.png|t18885.8617476852s|632afcb2dc5b9303|1639237|file|vector|distribution_maps||164.7||
+distribution_maps|pattern|2a0ac0b984f5d7a2|ecaeedee91be76a9||-1141181583||||2735340|file|vector||distribution_maps_ef29f0d7*distribution_maps_e52293ef|283.73||
