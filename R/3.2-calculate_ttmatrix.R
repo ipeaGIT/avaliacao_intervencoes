@@ -7,7 +7,7 @@ library(sf)
 library(mapview)
 library(googlesheets4) # install.packages("googlesheets4")
 library(gtfstools) # install.packages('gtfstools')
-source("../acesso_oport/R/fun/setup.R")
+#source("../acesso_oport/R/fun/setup.R")
 
 
 # first, lets create the points -------------------------------------------
@@ -34,77 +34,250 @@ create_points_r5 <- function(sigla_muni) {
   data.table::fwrite(hex_centroides, dir_output)
 }
 
-create_points_r5("for")
-create_points_r5("goi")
+#create_points_r5("for")
+#create_points_r5("goi")
 
 
 
 
-
-
-# departure <- "02-10-2019 06:00:00"
-
-calculate_ttmatrix <- function(sigla_muni, modo_acesso, departure = "02-03-2020 06:00:00") {
+# city <- tar_read(both_cities)[1]
+# scenario <- tar_read(before_after)[1]
+# graph <- tar_read(graph)[1]
+# points_path <- tar_read(points_path)[1]
+transit_ttm <- function(city, scenario, graph, points_path) {
   
-  points <- fread(sprintf("../../data/avaliacao_intervencoes/r5/points/points_%s_09_2019.csv", sigla_muni)) %>% dplyr::select(id = id_hex, lat = Y, lon = X)
-  mode <- c(modo_acesso, "TRANSIT")
-  max_walk_dist <- 3000   # meters
-  max_trip_duration <- 180 # minutes
-  departure_datetime <- as.POSIXct(departure, format = "%d-%m-%Y %H:%M:%S")
+  r5r_core <- setup_r5(graph, use_elevation = TRUE)
   
+  points <- fread(points_path)
+  setnames(points, c("id", "lon", "lat"))
   
-  # 1 - ttmatrix - antes ----------------------------------------------------
+  departure <- ifelse(
+    city == "for",
+    "02-03-2020 06:00:00",
+    "02-10-2019 06:00:00"
+  )
   
+  ttm <- travel_time_matrix(
+    r5r_core,
+    origins = points,
+    destinations = points,
+    mode = c("WALK", "TRANSIT"),
+    departure_datetime = as.POSIXct(departure, format = "%d-%m-%Y %H:%M:%S"),
+    time_window = 120L,
+    max_trip_duration = 180L,
+    max_walk_dist = 1000,
+    n_threads = getOption("R5R_THREADS"),
+    verbose = FALSE
+  )
   
+  # save object and return path
   
-  r5r_core <- setup_r5(data_path = sprintf("../../data/avaliacao_intervencoes/r5/graph/%s_antes", sigla_muni), verbose = FALSE)
+  dir_path <- file.path(
+    "../../data/avaliacao_intervencoes", city, "ttmatrix", scenario
+  )
+  if (!dir.exists(dir_path)) dir.create(dir_path)
   
-  # 3.1) calculate a travel time matrix
-  ttm1 <- travel_time_matrix(r5r_core = r5r_core,
-                             origins = points,
-                             destinations = points,
-                             mode = mode,
-                             departure_datetime = departure_datetime,
-                             time_window = 120,
-                             max_walk_dist = max_walk_dist,
-                             max_trip_duration = max_trip_duration)
+  file_path <- file.path(dir_path, "ttmatrix_transit.rds")
+  saveRDS(ttm, file_path)
   
-  
-  
-  
-  # 2 - ttmatrix - depois ----------------------------------------------------
-  
-  r5r_core <- setup_r5(data_path = sprintf("../../data/avaliacao_intervencoes/r5/graph/%s_depois", sigla_muni), verbose = TRUE)
-  
-  ttm2 <- travel_time_matrix(r5r_core = r5r_core,
-                             origins = points,
-                             destinations = points,
-                             mode = mode,
-                             departure_datetime = departure_datetime,
-                             time_window = 120,
-                             max_walk_dist = max_walk_dist,
-                             max_trip_duration = max_trip_duration)
-  
-  # juntar matrizes
-  
-  ttm <- full_join(ttm1, ttm2,
-                   by = c("fromId", "toId"),
-                   suffix = c("_antes", "_depois"))
-  
-  
-  # rename
-  ttm <- ttm %>% 
-    mutate(city = sigla_muni, mode = "tp") %>%
-    dplyr::select(city, mode, origin = fromId, destination = toId, ttime_antes = travel_time_antes, ttime_depois = travel_time_depois)
-  
-  # setDT(ttm)[, dif := ttime_depois - ttime_antes] %>% View()
-  
-  # save
-  readr::write_rds(ttm, sprintf("../../data/avaliacao_intervencoes/%s/ttmatrix/ttmatrix_%s_%s.rds", sigla_muni, sigla_muni, tolower(modo_acesso)))
+  return(file_path)
   
 }
 
 
-calculate_ttmatrix("for", "WALK", departure = "02-01-2020 06:00:00")
+# city <- tar_read(only_for)
+# scenario <- tar_read(before_after)[1]
+# graph <- tar_read(graph)[1]
+# points_path <- tar_read(points_path)[1]
+bike_ttm <- function(city, scenario, graph, points_path) {
+  
+  r5r_core <- setup_r5(graph, use_elevation = TRUE)
+  
+  points <- fread(points_path)
+  setnames(points, c("id", "lon", "lat"))
+  
+  bike_speed <- 12
+  bike_max_distance <- 5
+  
+  ttm <- travel_time_matrix(
+    r5r_core,
+    origins = points,
+    destinations = points,
+    mode = "BICYCLE",
+    departure_datetime = as.POSIXct("02-03-2020 06:00:00", format = "%d-%m-%Y %H:%M:%S"),
+    time_window = 1L,
+    max_trip_duration = bike_max_distance / bike_speed * 60,
+    bike_speed = bike_speed,
+    max_lts = 2,
+    n_threads = getOption("R5R_THREADS"),
+    verbose = FALSE
+  )
+  
+  # save object and return path
+  
+  dir_path <- file.path(
+    "../../data/avaliacao_intervencoes", city, "ttmatrix", scenario
+  )
+  if (!dir.exists(dir_path)) dir.create(dir_path)
+  
+  file_path <- file.path(dir_path, "ttmatrix_bike.rds")
+  saveRDS(ttm, file_path)
+  
+  return(file_path)
+  
+}
 
-calculate_ttmatrix("goi", "WALK", departure = "02-10-2019 06:00:00")
+
+# city <- tar_read(only_for)
+# scenario <- tar_read(before_after)[1]
+# graph <- tar_read(graph)[1]
+# points_path <- tar_read(points_path)[1]
+# bike_parks_path <- tar_read(bike_parks_path)[1]
+bfm_ttm <- function(city, scenario, graph, points_path, bike_parks_path) {
+  
+  r5r_core <- setup_r5(graph, use_elevation = TRUE)
+  
+  points <- fread(points_path)
+  setnames(points, c("id", "lon", "lat"))
+  
+  bike_parks <- fread(bike_parks_path)
+  bike_speed <- 12
+  bike_max_distance <- 5
+  
+  first_mile_ttm <- travel_time_matrix(
+    r5r_core,
+    origins = points,
+    destinations = bike_parks,
+    mode = "BICYCLE",
+    departure_datetime = as.POSIXct("02-03-2020 06:00:00", format = "%d-%m-%Y %H:%M:%S"),
+    time_window = 1L,
+    max_trip_duration = bike_max_distance / bike_speed * 60,
+    bike_speed = bike_speed,
+    max_lts = 2,
+    n_threads = getOption("R5R_THREADS"),
+    verbose = FALSE
+  )
+  
+  # the first mile leg can take anywhere from 0 to 25 minutes in this case.
+  # we then have to calculate 26 different remaining matrices, each one of them
+  # with a different departure time (so 6:00, 6:01, ..., 6:24, 6:25).
+  # we also need to subtract the first mile travel time from the max trip
+  # duration and from the time window to keep their consistency.
+  # finally, when merging the first mile and the remaining matrix we need to use
+  # both the ids and the first mile duration as our indices - so we join not
+  # only the right ids, but the trips that start at the correct time.
+  
+  remaining_ttm <- lapply(
+    0:25,
+    function(i) {
+      departure_datetime <- as.POSIXct(
+        "02-03-2020 06:00:00",
+        format = "%d-%m-%Y %H:%M:%S"
+      )
+      departure_datetime <- departure_datetime + 60 * i
+      max_trip_duration <- 180L - i
+      
+      travel_time_matrix(
+        r5r_core,
+        origins = bike_parks,
+        destinations = points,
+        mode = c("WALK", "TRANSIT"),
+        departure_datetime = departure_datetime,
+        time_window = 1L,
+        max_trip_duration = max_trip_duration,
+        max_walk_dist = 1000,
+        n_threads = getOption("R5R_THREADS"),
+        verbose = FALSE
+      )
+    }
+  )
+  names(remaining_ttm) <- 0:25
+  remaining_ttm <- rbindlist(remaining_ttm, idcol = "departure_minute")
+  remaining_ttm[, departure_minute := as.integer(departure_minute)]
+  
+  # join both tables together, calculate total travel time and keep only the
+  # fastest trip between two points
+  
+  ttm <- merge(
+    first_mile_ttm,
+    remaining_ttm,
+    by.x = c("toId", "travel_time"),
+    by.y = c("fromId", "departure_minute"),
+    allow.cartesian = TRUE
+  )
+  
+  setnames(
+    ttm,
+    old = c("toId", "travel_time", "fromId", "toId.y", "travel_time.y"),
+    new = c("intermediateId", "first_mile_time", "fromId", "toId", "remn_time")
+  )
+  
+  ttm[, travel_time := first_mile_time + remn_time]
+  ttm <- ttm[
+    ttm[, .I[travel_time == min(travel_time)], by = .(fromId, toId)]$V1
+  ]
+  
+  # there may be many trips between the same two points whose travel time equals
+  # to the minimum travel time (e.g. imagine that you can get from point A to
+  # point B using 3 stops as intermediate bike-first-mile stations and two of
+  # those trips have the same total travel time, which is lower than the third).
+  # therefore we need to filter 'ttm' to keep only one entry for each pair,
+  # otherwise we will double (triple, quadruple, ...) count the opportunities
+  # when estimating the accessibility.
+  
+  ttm <- ttm[ttm[, .I[1], by = .(fromId, toId)]$V1]
+  
+  # save object and return path
+  
+  dir_path <- file.path(
+    "../../data/avaliacao_intervencoes", city, "ttmatrix", scenario
+  )
+  if (!dir.exists(dir_path)) dir.create(dir_path)
+  
+  file_path <- file.path(dir_path, "ttmatrix_bike_first_mile.rds")
+  saveRDS(ttm, file_path)
+  
+  return(file_path)
+  
+}
+
+
+# city <- tar_read(only_for)
+# scenario <- tar_read(before_after)[1]
+# bike_matrix_path <- tar_read(bike_matrix)[1]
+# transit_matrix_path <- tar_read(transit_matrix)[1]
+# bfm_matrix_path <- tar_read(bike_first_mile_matrix)[1]
+# points_path <- tar_read(points_path)[1]
+join_ttms <- function(city,
+                      scenario,
+                      bike_matrix_path,
+                      transit_matrix_path,
+                      bfm_matrix_path,
+                      points_path) {
+  
+  bike_matrix <- readRDS(bike_matrix_path)
+  transit_matrix <- readRDS(transit_matrix_path)
+  bfm_matrix <- readRDS(bfm_matrix_path)
+  
+  points <- fread(points_path, select = "id_hex")
+  setnames(points, "id")
+  
+  ttm <- setDT(expand.grid(toId = points$id, fromId = points$id))
+  
+  ttm[bike_matrix, on = c("toId", "fromId"), bike_time := i.travel_time]
+  ttm[transit_matrix, on = c("toId", "fromId"), transit_time := i.travel_time]
+  ttm[bfm_matrix, on = c("toId", "fromId"), bfm_time := i.travel_time]
+  
+  # save object and return path
+  
+  dir_path <- file.path(
+    "../../data/avaliacao_intervencoes", city, "ttmatrix", scenario
+  )
+  if (!dir.exists(dir_path)) dir.create(dir_path)
+  
+  file_path <- file.path(dir_path, "ttmatrix_full.rds")
+  saveRDS(ttm, file_path)
+  
+  return(file_path)
+  
+}

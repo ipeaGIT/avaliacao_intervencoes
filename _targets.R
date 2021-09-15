@@ -16,6 +16,7 @@ suppressPackageStartupMessages({
 })
 
 source("R/fun/functions_daniel.R")
+source("R/3.2-calculate_ttmatrix.R")
 
 list(
   tar_target(
