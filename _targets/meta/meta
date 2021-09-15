@@ -53,20 +53,6 @@ scenario_analysis|pattern|5ceab8d20ed246c5|c4a9fcd217e2f07f||2137074516||||40823
 points_path_5b051ce7|branch|18ab0a2b47a5018a|6e559529febe8dc7|1dfe51088f459ee4|-1345917666|../../data/avaliacao_intervencoes/r5/points/points_for_09_2019.csv|t18885.6473726852s|e51c61be75f4abc7|119544|file|vector|points_path||0.84|st_centroid assumes attributes are constant over geometries of x|
 points_path_81c88634|branch|77421cf2193613ef|6e559529febe8dc7|b180bb9a7726cc7b|-67849046|../../data/avaliacao_intervencoes/r5/points/points_goi_09_2019.csv|t18885.6473726852s|fc6a9dc767d4fb1d|192088|file|vector|points_path||0.45|st_centroid assumes attributes are constant over geometries of x|
 points_path|pattern|032ad82b7161c65f|6e559529febe8dc7||-129430969||||311632|file|vector||points_path_5b051ce7*points_path_81c88634|1.29||
-create_dist_maps|function|69e8a3b944dd42e9||||||||||||||
-create_diff_maps|function|6fd884e2646c619b||||||||||||||
-bfm_ttm|function|209b123c2e6c00b0||||||||||||||
-calculate_palma|function|fcc31aff4f8588b4||||||||||||||
-calculate_access_diff|function|e0b1ec5966a58587||||||||||||||
-join_ttms|function|612e3ee44568cd55||||||||||||||
-.Random.seed|object|c17601449cdedb9b||||||||||||||
-analyse_scenarios|function|d3ba389021173304||||||||||||||
-create_points_r5|function|aeed5864aacd6641||||||||||||||
-bike_ttm|function|37069c3032a9ff24||||||||||||||
-transit_ttm|function|04e9b1675bfa884c||||||||||||||
-exploratory_report|function|5d9873cb65ea91a3||||||||||||||
-calculate_accessibility|function|83f362b60ca317df||||||||||||||
-create_boxplots|function|3d99555eba62f2ba||||||||||||||
 bike_first_mile_matrix_7fa54ca5|branch|15017d72f03f6485|ffe3eab2c218db8e|ef34ba096dbd12e3|993923977|../../data/avaliacao_intervencoes/for/ttmatrix/antes/ttmatrix_bike_first_mile.rds|t18885.6499421296s|379dd88e6e462b0c|13128533|file|vector|bike_first_mile_matrix||57.28||
 bike_first_mile_matrix_a5c650d5|branch|56a8a3df2db9f90b|ffe3eab2c218db8e|29563c31ce0e8fdf|1698148732|../../data/avaliacao_intervencoes/for/ttmatrix/depois/ttmatrix_bike_first_mile.rds|t18885.6504861111s|4d253fb7b7a9f6bb|13547844|file|vector|bike_first_mile_matrix||46.64||
 bike_first_mile_matrix|pattern|8e9151573ca20dd1|ffe3eab2c218db8e||1630637617||||26676377|file|vector||bike_first_mile_matrix_7fa54ca5*bike_first_mile_matrix_a5c650d5|103.92||
@@ -107,6 +93,20 @@ scenario_analysis_aa6fd22a|branch|bedb68e407bf9579|c4a9fcd217e2f07f|34bdb3d122f3
 difference_maps_dbf376ce|branch|2562f94935a6db98|6efac34c4c9dbcff|22876281a8c9c484|-957737937|../../data/avaliacao_intervencoes/for/figures/map_difference/CMATT60.png*../../data/avaliacao_intervencoes/for/figures/map_difference/CMAET60.png*../../data/avaliacao_intervencoes/for/figures/map_difference/CMASB60.png|t18885.657650463s|008b7001a6242e39|378631|file|vector|difference_maps||4.83||
 difference_maps_2c26282c|branch|d307138b8bd38fe4|6efac34c4c9dbcff|b6944411415f286c|-1814191180|../../data/avaliacao_intervencoes/goi/figures/map_difference/CMATT60.png*../../data/avaliacao_intervencoes/goi/figures/map_difference/CMAET60.png*../../data/avaliacao_intervencoes/goi/figures/map_difference/CMASB60.png|t18885.6577546296s|bfa5d328e7f6894a|252198|file|vector|difference_maps||9.64||
 difference_maps|pattern|dc688238687849d7|6efac34c4c9dbcff||-1491009712||||630829|file|vector||difference_maps_dbf376ce*difference_maps_2c26282c|14.47||
-difference_boxplot_dbf376ce|branch|ed7149eab1a995fe|c501c2b1a0f5fb1e|9fa413533737a1d8|-151089480|../../data/avaliacao_intervencoes/for/figures/boxplot_difference/CMATT60.png*../../data/avaliacao_intervencoes/for/figures/boxplot_difference/CMAET60.png*../../data/avaliacao_intervencoes/for/figures/boxplot_difference/CMASB60.png|t18885.6578009259s|c23b160a914d461e|129673|file|vector|difference_boxplot||3.35||
 difference_boxplot_2c26282c|branch|6d7fc46dbccae106|c501c2b1a0f5fb1e|be11722704d58685|1630569489|../../data/avaliacao_intervencoes/goi/figures/boxplot_difference/CMATT60.png*../../data/avaliacao_intervencoes/goi/figures/boxplot_difference/CMAET60.png*../../data/avaliacao_intervencoes/goi/figures/boxplot_difference/CMASB60.png|t18885.6578356481s|d2a1ccc5da11fdd4|136848|file|vector|difference_boxplot||3.47|Solution may be nonunique|
-difference_boxplot|pattern|325bd4ef34a219a6|c501c2b1a0f5fb1e||624006850||||266521|file|vector||difference_boxplot_dbf376ce*difference_boxplot_2c26282c|6.82||
+create_dist_maps|function|69e8a3b944dd42e9||||||||||||||
+create_diff_maps|function|6fd884e2646c619b||||||||||||||
+bfm_ttm|function|209b123c2e6c00b0||||||||||||||
+calculate_palma|function|fcc31aff4f8588b4||||||||||||||
+calculate_access_diff|function|e0b1ec5966a58587||||||||||||||
+join_ttms|function|612e3ee44568cd55||||||||||||||
+.Random.seed|object|224bd467efe48d78||||||||||||||
+analyse_scenarios|function|d3ba389021173304||||||||||||||
+create_points_r5|function|aeed5864aacd6641||||||||||||||
+bike_ttm|function|37069c3032a9ff24||||||||||||||
+transit_ttm|function|04e9b1675bfa884c||||||||||||||
+exploratory_report|function|5d9873cb65ea91a3||||||||||||||
+calculate_accessibility|function|83f362b60ca317df||||||||||||||
+create_boxplots|function|3d99555eba62f2ba||||||||||||||
+difference_boxplot_dbf376ce|branch|31c311cd8f73593c|c501c2b1a0f5fb1e|9fa413533737a1d8|-151089480|../../data/avaliacao_intervencoes/for/figures/boxplot_difference/CMATT60.png*../../data/avaliacao_intervencoes/for/figures/boxplot_difference/CMAET60.png*../../data/avaliacao_intervencoes/for/figures/boxplot_difference/CMASB60.png|t18885.6716550926s|0bea4b8661b36aec|129643|file|vector|difference_boxplot||4.75||
+difference_boxplot|pattern|69feb795194077d6|c501c2b1a0f5fb1e||624006850||||129643|file|vector||difference_boxplot_dbf376ce*difference_boxplot_2c26282c|4.75||
