@@ -15,9 +15,9 @@ suppressPackageStartupMessages({
   library(dplyr)
 })
 
-source("R/fun/functions_daniel.R")
 source("R/3.2-calculate_ttmatrix.R")
 source("R/4-calculate_access.R")
+source("R/5-compare_access.R")
 
 list(
   tar_target(
