@@ -1,8 +1,8 @@
-# city <- tar_read(both_cities)[1]
-# access_diff_abs <- tar_read(transit_access_diff_abs)[1]
-# access_diff_rel <- tar_read(transit_access_diff_rel)[1]
-# grid_path <- tar_read(grid_path)[1]
-# measure <- "CMATT60"
+# city <- tar_read(both_cities)[2]
+# access_diff_abs <- tar_read(transit_access_diff_abs)[2]
+# access_diff_rel <- tar_read(transit_access_diff_rel)[2]
+# grid_path <- tar_read(grid_path)[2]
+# measure <- "CMAET60"
 create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
   
   access_diff_abs <- readRDS(access_diff_abs)
@@ -137,6 +137,10 @@ create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
       dir_path <- file.path(dir_path, "boxplot_difference")
       if (!dir.exists(dir_path)) dir.create(dir_path)
       
+      # ggsave() raises a warning in the CMAET60 case related to the non
+      # uniqueness of the quantile regression solution. nothing to really worry
+      # about
+      
       file_path <- file.path(dir_path, paste0(measure, ".png"))
       ggsave(
         file_path,
@@ -161,7 +165,7 @@ calculate_palma <- function(access_diff, relevant_var) {
   
   palma <- weighted.mean(richest_10[[relevant_var]], w = richest_10$pop) /
     weighted.mean(poorest_40[[relevant_var]], w = poorest_40$pop)
-  palma <- format(palma, digits = 4, nsmall = 4)
+  palma <- format(palma, digits = 2, nsmall = 2)
   
 }
 
