@@ -52,16 +52,6 @@ list(
     format = "file"
   ),
   tar_target(
-    points_path,
-    paste0(
-      "../../data/avaliacao_intervencoes/r5/points/points_",
-      both_cities,
-      "_09_2019.csv"
-    ),
-    format = "file",
-    pattern = map(both_cities)
-  ),
-  tar_target(
     bike_parks_path,
     paste0(
       "../../data/avaliacao_intervencoes/r5/points/bike_parks_",
@@ -78,8 +68,14 @@ list(
       both_cities,
       "_09_2019.rds"
     ),
-    format = "file",
-    pattern = map(both_cities)
+    pattern = map(both_cities),
+    format = "file"
+  ),
+  tar_target(
+    points_path,
+    create_points_r5(both_cities, grid_path),
+    pattern = map(both_cities, grid_path),
+    format = "file"
   ),
   tar_target(
     graph,

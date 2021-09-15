@@ -1,43 +1,42 @@
-options(java.parameters = '-Xmx10G')
-library(r5r)
-library(dplyr)
-library(data.table)
-library(tidyr)
-library(sf)
-library(mapview)
-library(googlesheets4) # install.packages("googlesheets4")
-library(gtfstools) # install.packages('gtfstools')
-#source("../acesso_oport/R/fun/setup.R")
+# city <- tar_read(both_cities)[1]
+# grid_path <- tar_read(grid_path)[1]
+create_points_r5 <- function(city, grid_path) {
+  
+  grid <- setDT(readRDS(grid_path))
+  
+  # keep only cells that have either population > 0 or opportunities > 0
+  
+  grid <- grid[
+    pop_total > 0 |
+      renda_total > 0 |
+      empregos_total > 0 |
+      saude_total > 0 |
+      edu_total > 0
+  ]
+  
+  # get centroids and save it as csv
+  
+  centroids <- grid[, .(id_hex, geometry)]
+  centroids <- st_sf(centroids)
+  centroids <- st_centroid(centroids)
+  
+  coords <- as.data.table(st_coordinates(centroids))
+  
+  centroids <- cbind(centroids, coords)
+  centroids$geometry <- NULL
+  
+  # save object and return path
+  
+  file_path <- paste0(
+    "../../data/avaliacao_intervencoes/r5/points/points_",
+    city,
+    "_09_2019.csv"
+  )
+  fwrite(centroids, file_path)
+  
+  return(file_path)
 
-
-# first, lets create the points -------------------------------------------
-
-create_points_r5 <- function(sigla_muni) {
-  
-  dir_hex <- sprintf("../../data/acesso_oport/hex_agregados/%s/hex_agregado_%s_09_%s.rds", "2019", sigla_muni, "2019")
-  
-  
-  hex_centroides <- readr::read_rds(dir_hex) %>%
-    # Tirar hexagonos sem atividade
-    filter(!(pop_total == 0 & 
-               renda_total == 0 & 
-               empregos_total == 0 & 
-               saude_total == 0 & 
-               edu_total == 0)) %>%
-    dplyr::select(id_hex) %>%
-    st_centroid() %>%
-    sfc_as_cols(names = c("X","Y")) # funcao (dentro de stup.R) que transforma sf em data.frame com lat/long em colunas separadas
-  
-  
-  # salvar centroids
-  dir_output <- sprintf("../../data/avaliacao_intervencoes/r5/points/points_%s_09_2019.csv", sigla_muni)
-  data.table::fwrite(hex_centroides, dir_output)
 }
-
-#create_points_r5("for")
-#create_points_r5("goi")
-
-
 
 
 # city <- tar_read(both_cities)[1]
