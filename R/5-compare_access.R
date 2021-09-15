@@ -161,7 +161,7 @@ calculate_palma <- function(access_diff, relevant_var) {
   
   palma <- weighted.mean(richest_10[[relevant_var]], w = richest_10$pop) /
     weighted.mean(poorest_40[[relevant_var]], w = poorest_40$pop)
-  palma <- format(palma, digits = 4)
+  palma <- format(palma, digits = 4, nsmall = 4)
   
 }
 
