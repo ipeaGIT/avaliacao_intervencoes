@@ -222,7 +222,7 @@ create_dist_maps <- function(city, access_paths, grid_path) {
       trip_id = desired_trips
     )
     transit_shapes <- setDT(transit_shapes)[
-      !(trip_id == "LL-0-1" & origin_file == "stop_times")
+      !(trip_id == "LL-0.1-1" & origin_file == "stop_times")
     ]
     
   } else if (city == "goi") {
@@ -248,7 +248,7 @@ create_dist_maps <- function(city, access_paths, grid_path) {
     
   }
   
-  # transform sf objects' CRS to 3857 so they became "compatible" with the
+  # transform sf objects' crs to 3857 so they became "compatible" with the
   # basemap raster
   
   access <- st_transform(st_sf(access), 3857)
