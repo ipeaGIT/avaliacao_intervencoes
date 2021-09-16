@@ -116,6 +116,14 @@ list(
       group_by(
         tidyr::nesting(
           access_file = transit_access,
+          access_df_hash = vapply(
+            transit_access,
+            FUN.VALUE = character(1),
+            FUN = function(i) {
+              df <- readRDS(i)
+              digest::digest(df, algo = "md5")
+            }
+          ),
           tidyr::crossing(city = both_cities, scenario = before_after)
         ),       
         city
