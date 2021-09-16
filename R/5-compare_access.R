@@ -366,7 +366,6 @@ create_diff_maps <- function(city,
     on = c(fromId = "id_hex"),
     `:=`(geometry = i.geometry, decil = i.decil)
   ]
-  # access_diff <- access_diff[decil > 0]
   
   # download basemap and city and transit routes shapes, depending on the city
   # using 2018 data to generate the basemap of goiania city only, not MR 
@@ -461,25 +460,19 @@ create_diff_maps <- function(city,
       # legend bar depends on the city, because goi has negative differences and
       # for doesn't
       
-      if (city == "for") {
-        pal <- "Greens"
-        lim_abs <- NULL
-        lim_rel <- NULL
-      } else if (city == "goi") {
-        pal <- "RdYlGn"
-        
-        max_diff_abs <- max(
-          access_diff[type == "abs"][[relevant_var]],
-          na.rm = TRUE
-        )
-        lim_abs <- c(-1, 1) * max_diff_abs
-        
-        max_diff_rel <- max(
-          access_diff[type == "rel"][[relevant_var]],
-          na.rm = TRUE
-        )
-        lim_rel <- c(-1, 1) * max_diff_rel
-      }
+      pal <- "RdBu"
+      
+      max_diff_abs <- max(
+        abs(access_diff[type == "abs"][[relevant_var]]),
+        na.rm = TRUE
+      )
+      lim_abs <- c(-1, 1) * max_diff_abs
+      
+      max_diff_rel <- max(
+        abs(access_diff[type == "rel"][[relevant_var]]),
+        na.rm = TRUE
+      )
+      lim_rel <- c(-1, 1) * abs(max_diff_rel)
       
       # transform sf objects' crs to 3857 so they became "compatible" with the
       # basemap raster
@@ -491,10 +484,10 @@ create_diff_maps <- function(city,
       # absolute difference
       
       abs_plot <- ggplot() +
-        geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        coord_equal() +
-        scale_fill_identity() +
-        ggnewscale::new_scale_fill() +
+        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        # coord_equal() +
+        # scale_fill_identity() +
+        # ggnewscale::new_scale_fill() +
         geom_sf(
           data = access_diff[access_diff$type == "abs", ],
           aes(fill = get(relevant_var)),
@@ -520,10 +513,10 @@ create_diff_maps <- function(city,
       # relative difference
       
       rel_plot <- ggplot() +
-        geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        coord_equal() +
-        scale_fill_identity() +
-        ggnewscale::new_scale_fill() +
+        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        # coord_equal() +
+        # scale_fill_identity() +
+        # ggnewscale::new_scale_fill() +
         geom_sf(
           data = access_diff[access_diff$type == "rel", ],
           aes(fill = get(relevant_var)),
