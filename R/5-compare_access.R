@@ -664,3 +664,153 @@ analyse_scenarios <- function(city,
   )
   
 }
+
+
+# city <- tar_read(only_for)
+# access_paths <- tar_read(full_access)
+# access_diff_abs_path <- tar_read(full_access_diff_abs)
+# access_diff_rel_path <- tar_read(full_access_diff_rel)
+# grid_path <- tar_read(grid_path)[1]
+# measure <- "CMATT60"
+plot_summary <- function(city,
+                         access_paths,
+                         access_diff_abs_path,
+                         access_diff_rel_path,
+                         grid_path) {
+  
+  access <- lapply(access_paths, readRDS)
+  access_diff_abs <- readRDS(access_diff_abs_path)
+  access_diff_rel <- readRDS(access_diff_rel_path)
+  grid <- setDT(readRDS(grid_path))
+  
+  names(access) <- c("Antes", "Depois")
+  access <- rbindlist(access, idcol = "scenario")
+  access[
+    grid,
+    on = c(fromId = "id_hex"),
+    `:=`(geometry = i.geometry, decil = i.decil)
+  ]
+  
+  # download basemap and city and transit routes shapes
+  
+  basemap <- readRDS(
+    paste0(
+      "../../data/acesso_oport/maptiles_crop/2018/mapbox/maptile_crop_mapbox_",
+      city,
+      "_2018.rds"
+    )
+  )
+
+  city_shape <- geobr::read_municipality(2304400)
+    
+  gtfs <-  gtfstools::read_gtfs(
+    "../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_depois.zip"
+  )
+  desired_trips <- gtfs$trips[
+    gtfs$routes,
+    on = "route_id",
+    `:=`(route_id = i.route_id, route_long_name = i.route_long_name)
+  ]
+  desired_trips <- desired_trips[
+    desired_trips[, .I[1], by = route_long_name]$V1
+  ]
+  desired_trips <- desired_trips$trip_id
+  
+  transit_shapes <- gtfstools::get_trip_geometry(
+    gtfs,
+    trip_id = desired_trips
+  )
+  transit_shapes <- setDT(transit_shapes)[
+    !(trip_id == "LL-0.1-1" & origin_file == "stop_times")
+  ]
+  
+  # transform sf objects' crs to 3857 so they became "compatible" with the
+  # basemap raster
+  
+  access <- st_transform(st_sf(access), 3857)
+  transit_shapes <- st_transform(st_sf(transit_shapes), 3857)
+  city_shape <- st_transform(city_shape, 3857)
+  
+  # three different plots
+  
+  measures <- c("CMATT60", "CMAET60", "CMASB60")
+  
+  vapply(
+    measures,
+    FUN.VALUE = character(1),
+    FUN = function(measure) {
+      relevant_var <- paste0("all_modes_", measure)
+      
+      label_func <- if (grepl("TT", measure)) {
+        scales::label_number(
+          accuracy = 1,
+          scale = 1/1000,
+          suffix = "k",
+          big.mark = ","
+        )
+      } else {
+        scales::label_number()
+      }
+      
+      # first plot - "normal" accessibility distribution
+      
+      map_dist <- ggplot() +
+        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        # coord_equal() +
+        # scale_fill_identity() +
+        # ggnewscale::new_scale_fill() +
+        geom_sf(
+          data = access,
+          aes(fill = get(relevant_var)),
+          color = NA
+        ) +
+        geom_sf(
+          data = transit_shapes,
+          size = 0.5,
+          alpha = 0.7
+        ) +
+        geom_sf(data = city_shape, fill = NA) +
+        facet_wrap(~ scenario) +
+        scale_fill_viridis_c(
+          name = NULL,
+          option = "inferno",
+          label = label_func,
+          n.breaks = 4
+        ) +
+        theme_minimal() +
+        labs(y = "Acessibilidade") +
+        theme(
+          axis.text = element_blank(),
+          axis.title.x = element_blank(),
+          panel.grid = element_blank()
+          #,
+          #strip.text = element_text(size = 11) # same size as legend title
+        )
+      
+      # save the result and return the path
+      
+      dir_path <- file.path(
+        "../../data/avaliacao_intervencoes",
+        city,
+        "figures"
+      )
+      if (!dir.exists(dir_path)) dir.create(dir_path)
+      
+      dir_path <- file.path(dir_path, "summary_bfm_bike_transit")
+      if (!dir.exists(dir_path)) dir.create(dir_path)
+      
+      file_path <- file.path(dir_path, paste0(measure, ".png"))
+      ggsave(
+        file_path,
+        final_plot,
+        width = 16,
+        height = 16,
+        units = "cm"
+      )
+      
+      return(file_path)
+      
+    }
+  )
+  
+}
