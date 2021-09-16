@@ -150,9 +150,9 @@ calculate_accessibility <- function(city,
 }
 
 
-# city <- "goi"
-# access_paths <- tar_read(access_metadata)$access_file[3:4]
-# method <- "absolute"
+# city <- "for"
+# access_paths <- tar_read(access_metadata)$access_file[1:2]
+# method <- "relative"
 calculate_access_diff <- function(city,
                                   access_paths,
                                   method = c("absolute", "relative")) {
@@ -206,7 +206,24 @@ calculate_access_diff <- function(city,
       ")"
     )
     
+    diff_expression_log <- paste0(
+      "`:=`(",
+      paste(
+        paste0(access_cols, "_log"),
+        "= log(",
+        paste0(access_cols, "_depois"),
+        "/",
+        paste0(access_cols, "_antes"),
+        ")",
+        collapse = ", "
+      ),
+      ")"
+    )
+    
     access_diff[, eval(parse(text = diff_expression))]
+    access_diff[, eval(parse(text = diff_expression_log))]
+    
+    access_cols <- c(access_cols, paste0(access_cols, "_log"))
     
     for (col in access_cols) {
       data.table::set(
@@ -214,6 +231,26 @@ calculate_access_diff <- function(city,
         i = which(is.nan(access_diff[[col]])),
         j = col,
         value = 0
+      )
+      
+      # calculating log difference may introduce some Inf and -Inf
+      # substitute them with the man and min finite numbers
+      
+      max_finite <- max(access_diff[[col]][is.finite(access_diff[[col]])])
+      min_finite <- min(access_diff[[col]][is.finite(access_diff[[col]])])
+      
+      data.table::set(
+        access_diff,
+        i = which(is.infinite(access_diff[[col]]) & access_diff[[col]] > 0),
+        j = col,
+        value = max_finite
+      )
+      
+      data.table::set(
+        access_diff,
+        i = which(is.infinite(access_diff[[col]]) & access_diff[[col]] < 0),
+        j = col,
+        value = min_finite
       )
     }
     
