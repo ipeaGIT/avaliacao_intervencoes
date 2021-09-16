@@ -280,17 +280,17 @@ list(
     ),
     pattern = head(grid_path, 1),
     format = "file"
+  ),
+  tar_target(
+    all_modes_summary,
+    plot_summary(
+      only_for,
+      full_access,
+      full_access_diff_abs,
+      full_access_diff_rel,
+      grid_path
+    ),
+    pattern = head(grid_path, 1),
+    format = "file"
   )
-  # ,
-  # tar_target(
-  #   all_modes_summary,
-  #   plot_summary(
-  #     only_for,
-  #     full_access,
-  #     full_access_diff_abs,
-  #     grid_path
-  #   ),
-  #   pattern = head(grid_path, 1),
-  #   format = "file"
-  # )
 )

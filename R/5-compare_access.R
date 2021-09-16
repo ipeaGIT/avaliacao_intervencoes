@@ -694,13 +694,12 @@ plot_summary <- function(city,
   access_diff_abs[
     grid,
     on = c(fromId = "id_hex"),
-    `:=`(geometry = i.geometry, decil = i.decil)
+    `:=`(geometry = i.geometry, decil = i.decil, pop = i.pop_total)
   ]
-  
   access_diff_rel[
     grid,
     on = c(fromId = "id_hex"),
-    `:=`(geometry = i.geometry, decil = i.decil)
+    `:=`(geometry = i.geometry, decil = i.decil, pop = i.pop_total)
   ]
   
   # download basemap and city and transit routes shapes
@@ -768,7 +767,7 @@ plot_summary <- function(city,
       
       # first row - "normal" accessibility distribution
       
-      map_dist <- ggplot() +
+      row_one <- ggplot() +
         # geom_raster(data = basemap, aes(x, y, fill = hex)) +
         # coord_equal() +
         # scale_fill_identity() +
@@ -801,128 +800,121 @@ plot_summary <- function(city,
           #strip.text = element_text(size = 11) # same size as legend title
         )
       
-      # objects relevant for second and third row
+      # function to generate rows with a difference map on the left and a
+      # difference boxplot on the right
       
-      diff_map_theme <- theme_minimal() +
-        theme(
-          axis.text = element_blank(),
-          axis.title = element_blank(),
-          panel.grid = element_blank(),
-          plot.subtitle = element_text(hjust = 0.5)
-        )
-      
-      boxplot_theme <- theme_minimal() +
-        theme(
-          axis.text.x = element_blank(),
-          panel.grid = element_blank(),
-          plot.subtitle = element_markdown(),
-          legend.position = "none"
-        )
-      
-      # second row - absolute difference map and boxplot
-      
-      map_diff_abs <- ggplot() +
-        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        # coord_equal() +
-        # scale_fill_identity() +
-        # ggnewscale::new_scale_fill() +
-        geom_sf(
-          data = access_diff_abs,
-          aes(fill = get(relevant_var)),
-          color = NA
-        ) +
-        geom_sf(
-          data = transit_shapes,
-          size = 0.5,
-          alpha = 0.7
-        ) +
-        geom_sf(data = city_shape, fill = NA) +
-        scale_fill_distiller(
-          name = NULL,
-          palette = "Greens",
-          label = label_func,
-          n.breaks = 4,
-          direction = 1
-        ) +
-        labs(x = "Dif. absoluta") +
-        diff_map_theme
-      
-      
-      
-      
-      
-      
-      
-
-  
-      
-      # absolute difference
-      
-      abs_plot <- 
-      
-      
-      
-      
-      if (city == "for") {
+      diff_row_generator <- function(access_diff, method) {
         
-        abs_ceiling <- fcase(
-          measure == "CMATT60", 70000,
-          measure == "CMAET60", 30,
-          measure == "CMASB60", 12
-        )
-        rel_ceiling <- fcase(
-          measure == "CMATT60", 0.2,
-          measure == "CMAET60", 0.12,
-          measure == "CMASB60", 0.2
+        diff_map_theme <- theme_minimal() +
+          theme(
+            axis.text = element_blank(),
+            axis.title.x = element_blank(),
+            panel.grid = element_blank(),
+            plot.subtitle = element_text(hjust = 0.5)
+          )
+        
+        boxplot_theme <- theme_minimal() +
+          theme(
+            panel.grid = element_blank(),
+            plot.subtitle = element_markdown(),
+            legend.position = "none"
+          )
+        
+        title <- ifelse(method == "abs", "Dif. absoluta", "Dif. relativa")
+        label <- ifelse(method == "abs", label_func, scales::percent_format())
+        label_boxplot <- ifelse(
+          method == "abs",
+          scales::number,
+          scales::percent
         )
         
-      } else if (city == "goi") {
+        map_diff <- ggplot() +
+          # geom_raster(data = basemap, aes(x, y, fill = hex)) +
+          # coord_equal() +
+          # scale_fill_identity() +
+          # ggnewscale::new_scale_fill() +
+          geom_sf(
+            data = access_diff,
+            aes(fill = get(relevant_var)),
+            color = NA
+          ) +
+          geom_sf(
+            data = transit_shapes,
+            size = 0.5,
+            alpha = 0.7
+          ) +
+          geom_sf(data = city_shape, fill = NA) +
+          scale_fill_distiller(
+            name = NULL,
+            palette = "Greens",
+            label = label,
+            n.breaks = 4,
+            direction = 1
+          ) +
+          labs(y = title) +
+          diff_map_theme
         
-        abs_ceiling <- fcase(
-          measure == "CMATT60", 30000,
-          measure == "CMAET60", 8,
-          measure == "CMASB60", 5
+        ceiling <- fcase(
+          measure == "CMATT60" && method == "abs", 70000,
+          measure == "CMAET60" && method == "abs", 50,
+          measure == "CMASB60" && method == "abs", 15,
+          measure == "CMATT60" && method == "rel", 0.2,
+          measure == "CMAET60" && method == "rel", 0.12,
+          measure == "CMASB60" && method == "rel", 0.2
         )
-        rel_ceiling <- fcase(
-          measure == "CMATT60", 0.1,
-          measure == "CMAET60", 0.05,
-          measure == "CMASB60", 0.05
+        
+        palma <- calculate_palma(as.data.table(access_diff), relevant_var)
+        
+        access_diff <- access_diff[access_diff$decil > 0, ]
+        
+        boxplot_diff <- ggplot(access_diff) +
+          geom_boxplot(
+            aes(
+              as.factor(decil),
+              get(relevant_var),
+              weight = pop,
+              color = as.factor(decil)
+            ),
+            outlier.size = 1.5,
+            outlier.alpha = 0.5,
+            show.legend = FALSE
+          ) +
+          scale_colour_brewer(palette = "RdBu") +
+          labs(
+            y = NULL,
+            x = NULL,
+            subtitle = paste0("**Razao de Palma**: ", palma)
+          ) +
+          coord_cartesian(ylim = c(0, ceiling)) +
+          boxplot_theme +
+          scale_y_continuous(labels = label_boxplot)
+        
+        cowplot::plot_grid(
+          map_diff,
+          boxplot_diff,
+          nrow = 1,
+          rel_widths = c(1.5, 1)
         )
         
       }
       
+      # second row - absolute difference map and boxplot
       
+      row_two <- diff_row_generator(access_diff_abs, "abs")
       
-      # absolute difference
+      # third row - relative difference map and boxplot
       
-      palma_abs <- calculate_palma(access_diff[type == "abs"], relevant_var)
+      row_three <- diff_row_generator(access_diff_rel, "rel")
       
-      abs_plot <- ggplot(access_diff[type == "abs"]) +
-        geom_boxplot(
-          aes(
-            as.factor(decil),
-            get(relevant_var),
-            weight = pop,
-            color = as.factor(decil)
-          ),
-          outlier.size = 1.5,
-          outlier.alpha = 0.5,
-          show.legend = FALSE
-        ) +
-        scale_colour_brewer(palette = "RdBu") +
-        guides(color = guide_legend(nrow = 1, label.position = "bottom")) +
-        labs(
-          y = "Ganho absoluto de acess.",
-          x = NULL,
-          subtitle = paste0("**Razao de Palma**: ", palma_abs)
-        ) +
-        coord_cartesian(ylim = c(0, abs_ceiling)) +
-        boxplot_theme
+      # join all three rows in a single plot
       
-      
-      
-        
-        
+      final_plot <- cowplot::plot_grid(
+        row_one,
+        row_two,
+        row_three,
+        ncol = 1,
+        rel_heights = c(1, 1.1, 1.1)
+      )
       
       # save the result and return the path
       
@@ -941,7 +933,7 @@ plot_summary <- function(city,
         file_path,
         final_plot,
         width = 16,
-        height = 16,
+        height = 19.5,
         units = "cm"
       )
       
