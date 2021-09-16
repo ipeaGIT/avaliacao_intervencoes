@@ -305,7 +305,8 @@ create_dist_maps <- function(city, access_paths, grid_path) {
           legend.position = "bottom",
           axis.text = element_blank(),
           axis.title = element_blank(),
-          panel.grid = element_blank()
+          panel.grid = element_blank(),
+          strip.text = element_text(size = 11) # same size as legend title
         )
       
       dir_path <- file.path(
@@ -318,12 +319,18 @@ create_dist_maps <- function(city, access_paths, grid_path) {
       dir_path <- file.path(dir_path, "map_distribution")
       if (!dir.exists(dir_path)) dir.create(dir_path)
       
+      if (city == "for") {
+        plot_height <- 9
+      } else {
+        plot_height <- 10
+      }
+      
       file_path <- file.path(dir_path, paste0(measure, ".png"))
       ggsave(
         file_path,
         plot,
         width = 16,
-        height = 9,
+        height = plot_height,
         units = "cm"
       )
       
@@ -340,7 +347,10 @@ create_dist_maps <- function(city, access_paths, grid_path) {
 # access_diff_rel <- tar_read(transit_access_diff_rel)[1]
 # grid_path <- tar_read(grid_path)[1]
 # measure <- "CMATT60"
-create_diff_maps <- function(city, access_diff_abs, access_diff_rel, grid_path) {
+create_diff_maps <- function(city,
+                             access_diff_abs,
+                             access_diff_rel,
+                             grid_path) {
   
   access_diff_abs <- readRDS(access_diff_abs)
   access_diff_rel <- readRDS(access_diff_rel)
@@ -358,7 +368,16 @@ create_diff_maps <- function(city, access_diff_abs, access_diff_rel, grid_path) 
   ]
   # access_diff <- access_diff[decil > 0]
   
-  # download city and transit routes shapes, depending on the city
+  # download basemap and city and transit routes shapes, depending on the city
+  # using 2018 data to generate the basemap of goiania city only, not MR 
+  
+  basemap <- readRDS(
+    paste0(
+      "../../data/acesso_oport/maptiles_crop/2018/mapbox/maptile_crop_mapbox_",
+      city,
+      "_2018.rds"
+    )
+  )
   
   city_code <- ifelse(city == "for", 2304400, 5208707)
   city_shape <- geobr::read_municipality(city_code)
@@ -383,7 +402,7 @@ create_diff_maps <- function(city, access_diff_abs, access_diff_rel, grid_path) 
       trip_id = desired_trips
     )
     transit_shapes <- setDT(transit_shapes)[
-      !(trip_id == "LL-0-1" & origin_file == "stop_times")
+      !(trip_id == "LL-0.1-1" & origin_file == "stop_times")
     ]
     
   } else if (city == "goi") {
@@ -423,6 +442,7 @@ create_diff_maps <- function(city, access_diff_abs, access_diff_rel, grid_path) 
         theme(
           legend.position = "bottom",
           axis.text = element_blank(),
+          axis.title = element_blank(),
           panel.grid = element_blank(),
           plot.subtitle = element_text(hjust = 0.5)
         )
@@ -442,11 +462,11 @@ create_diff_maps <- function(city, access_diff_abs, access_diff_rel, grid_path) 
       # for doesn't
       
       if (city == "for") {
-        pal <- "PuBu"
+        pal <- "Greens"
         lim_abs <- NULL
         lim_rel <- NULL
       } else if (city == "goi") {
-        pal <- "RdBu"
+        pal <- "RdYlGn"
         
         max_diff_abs <- max(
           access_diff[type == "abs"][[relevant_var]],
@@ -461,11 +481,22 @@ create_diff_maps <- function(city, access_diff_abs, access_diff_rel, grid_path) 
         lim_rel <- c(-1, 1) * max_diff_rel
       }
       
+      # transform sf objects' crs to 3857 so they became "compatible" with the
+      # basemap raster
+      
+      access_diff <- st_transform(st_sf(access_diff), 3857)
+      transit_shapes <- st_transform(st_sf(transit_shapes), 3857)
+      city_shape <- st_transform(city_shape, 3857)
+      
       # absolute difference
       
       abs_plot <- ggplot() +
+        geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        coord_equal() +
+        scale_fill_identity() +
+        ggnewscale::new_scale_fill() +
         geom_sf(
-          data = st_sf(access_diff[type == "abs"]),
+          data = access_diff[access_diff$type == "abs", ],
           aes(fill = get(relevant_var)),
           color = NA
         ) +
@@ -476,39 +507,43 @@ create_diff_maps <- function(city, access_diff_abs, access_diff_rel, grid_path) 
         ) +
         geom_sf(data = city_shape, fill = NA) +
         scale_fill_distiller(
-          name = "Acessibilidade",
+          name = "Diferenca de\nacessibilidade",
           palette = pal,
           label = label_func,
-          #n.breaks = 4,
+          n.breaks = 4,
           direction = 1,
           limits = lim_abs
         ) +
-        labs(subtitle = "Dif. absoluta") +
+        labs(subtitle = "Absoluta") +
         diff_map_theme
       
       # relative difference
       
       rel_plot <- ggplot() +
+        geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        coord_equal() +
+        scale_fill_identity() +
+        ggnewscale::new_scale_fill() +
         geom_sf(
-          data = st_sf(access_diff[type == "rel"]),
+          data = access_diff[access_diff$type == "rel", ],
           aes(fill = get(relevant_var)),
           color = NA
         ) +
         geom_sf(
-          data = st_sf(transit_shapes),
+          data = transit_shapes,
           size = 0.5,
           alpha = 0.7
         ) +
         geom_sf(data = city_shape, fill = NA) +
         scale_fill_distiller(
-          name = "Acessibilidade",
+          name = "Diferenca de\nacessibilidade",
           palette = pal,
-          #n.breaks = 4,
+          n.breaks = 4,
           direction = 1,
           labels = scales::percent_format(),
           limits = lim_rel
         ) +
-        labs(subtitle = "Dif. relativa") +
+        labs(subtitle = "Relativa") +
         diff_map_theme
       
       # join them using patchwork, save the result and return the path
@@ -525,12 +560,18 @@ create_diff_maps <- function(city, access_diff_abs, access_diff_rel, grid_path) 
       dir_path <- file.path(dir_path, "map_difference")
       if (!dir.exists(dir_path)) dir.create(dir_path)
       
+      if (city == "for") {
+        plot_height <- 9
+      } else {
+        plot_height <- 10
+      }
+      
       file_path <- file.path(dir_path, paste0(measure, ".png"))
       ggsave(
         file_path,
         plot,
         width = 16,
-        height = 9,
+        height = plot_height,
         units = "cm"
       )
       
