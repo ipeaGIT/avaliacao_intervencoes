@@ -261,6 +261,15 @@ list(
     format = "file"
   ),
   tar_target(
+    full_access_diff_rel,
+    calculate_access_diff(
+      only_for,
+      full_access,
+      method = "relative"
+    ),
+    format = "file"
+  ),
+  tar_target(
     scenario_analysis,
     analyse_scenarios(
       only_for,
@@ -271,16 +280,17 @@ list(
     ),
     pattern = head(grid_path, 1),
     format = "file"
-  ),
-  tar_target(
-    all_modes_summary,
-    plot_summary(
-      only_for,
-      full_access,
-      full_access_diff_abs,
-      grid_path
-    ),
-    pattern = head(grid_path, 1),
-    format = "file"
   )
+  # ,
+  # tar_target(
+  #   all_modes_summary,
+  #   plot_summary(
+  #     only_for,
+  #     full_access,
+  #     full_access_diff_abs,
+  #     grid_path
+  #   ),
+  #   pattern = head(grid_path, 1),
+  #   format = "file"
+  # )
 )

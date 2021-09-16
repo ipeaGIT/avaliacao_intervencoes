@@ -691,6 +691,18 @@ plot_summary <- function(city,
     `:=`(geometry = i.geometry, decil = i.decil)
   ]
   
+  access_diff_abs[
+    grid,
+    on = c(fromId = "id_hex"),
+    `:=`(geometry = i.geometry, decil = i.decil)
+  ]
+  
+  access_diff_rel[
+    grid,
+    on = c(fromId = "id_hex"),
+    `:=`(geometry = i.geometry, decil = i.decil)
+  ]
+  
   # download basemap and city and transit routes shapes
   
   basemap <- readRDS(
@@ -728,6 +740,8 @@ plot_summary <- function(city,
   # basemap raster
   
   access <- st_transform(st_sf(access), 3857)
+  access_diff_abs <- st_transform(st_sf(access_diff_abs), 3857)
+  access_diff_rel <- st_transform(st_sf(access_diff_rel), 3857)
   transit_shapes <- st_transform(st_sf(transit_shapes), 3857)
   city_shape <- st_transform(city_shape, 3857)
   
@@ -752,7 +766,7 @@ plot_summary <- function(city,
         scales::label_number()
       }
       
-      # first plot - "normal" accessibility distribution
+      # first row - "normal" accessibility distribution
       
       map_dist <- ggplot() +
         # geom_raster(data = basemap, aes(x, y, fill = hex)) +
@@ -786,6 +800,129 @@ plot_summary <- function(city,
           #,
           #strip.text = element_text(size = 11) # same size as legend title
         )
+      
+      # objects relevant for second and third row
+      
+      diff_map_theme <- theme_minimal() +
+        theme(
+          axis.text = element_blank(),
+          axis.title = element_blank(),
+          panel.grid = element_blank(),
+          plot.subtitle = element_text(hjust = 0.5)
+        )
+      
+      boxplot_theme <- theme_minimal() +
+        theme(
+          axis.text.x = element_blank(),
+          panel.grid = element_blank(),
+          plot.subtitle = element_markdown(),
+          legend.position = "none"
+        )
+      
+      # second row - absolute difference map and boxplot
+      
+      map_diff_abs <- ggplot() +
+        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        # coord_equal() +
+        # scale_fill_identity() +
+        # ggnewscale::new_scale_fill() +
+        geom_sf(
+          data = access_diff_abs,
+          aes(fill = get(relevant_var)),
+          color = NA
+        ) +
+        geom_sf(
+          data = transit_shapes,
+          size = 0.5,
+          alpha = 0.7
+        ) +
+        geom_sf(data = city_shape, fill = NA) +
+        scale_fill_distiller(
+          name = NULL,
+          palette = "Greens",
+          label = label_func,
+          n.breaks = 4,
+          direction = 1
+        ) +
+        labs(x = "Dif. absoluta") +
+        diff_map_theme
+      
+      
+      
+      
+      
+      
+      
+
+  
+      
+      # absolute difference
+      
+      abs_plot <- 
+      
+      
+      
+      
+      if (city == "for") {
+        
+        abs_ceiling <- fcase(
+          measure == "CMATT60", 70000,
+          measure == "CMAET60", 30,
+          measure == "CMASB60", 12
+        )
+        rel_ceiling <- fcase(
+          measure == "CMATT60", 0.2,
+          measure == "CMAET60", 0.12,
+          measure == "CMASB60", 0.2
+        )
+        
+      } else if (city == "goi") {
+        
+        abs_ceiling <- fcase(
+          measure == "CMATT60", 30000,
+          measure == "CMAET60", 8,
+          measure == "CMASB60", 5
+        )
+        rel_ceiling <- fcase(
+          measure == "CMATT60", 0.1,
+          measure == "CMAET60", 0.05,
+          measure == "CMASB60", 0.05
+        )
+        
+      }
+      
+      
+      
+      # absolute difference
+      
+      palma_abs <- calculate_palma(access_diff[type == "abs"], relevant_var)
+      
+      abs_plot <- ggplot(access_diff[type == "abs"]) +
+        geom_boxplot(
+          aes(
+            as.factor(decil),
+            get(relevant_var),
+            weight = pop,
+            color = as.factor(decil)
+          ),
+          outlier.size = 1.5,
+          outlier.alpha = 0.5,
+          show.legend = FALSE
+        ) +
+        scale_colour_brewer(palette = "RdBu") +
+        guides(color = guide_legend(nrow = 1, label.position = "bottom")) +
+        labs(
+          y = "Ganho absoluto de acess.",
+          x = NULL,
+          subtitle = paste0("**Razao de Palma**: ", palma_abs)
+        ) +
+        coord_cartesian(ylim = c(0, abs_ceiling)) +
+        boxplot_theme
+      
+      
+      
+        
+        
       
       # save the result and return the path
       
