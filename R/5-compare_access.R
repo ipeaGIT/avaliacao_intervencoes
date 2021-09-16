@@ -190,12 +190,13 @@ create_dist_maps <- function(city, access_paths, grid_path) {
   ]
   
   # download basemap and city and transit routes shapes, depending on the city
+  # using 2018 data to generate the basemap of goiania city only, not MR 
   
   basemap <- readRDS(
     paste0(
-      "../../data/acesso_oport/maptiles_crop/2019/mapbox/maptile_crop_mapbox_",
+      "../../data/acesso_oport/maptiles_crop/2018/mapbox/maptile_crop_mapbox_",
       city,
-      "_2019.rds"
+      "_2018.rds"
     )
   )
   
