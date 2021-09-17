@@ -12,7 +12,8 @@ create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
   access_diff <- rbind(
     abs = access_diff_abs,
     rel = access_diff_rel,
-    idcol = "type"
+    idcol = "type",
+    fill = TRUE
   )
   access_diff[
     grid,
@@ -28,101 +29,102 @@ create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
     FUN.VALUE = character(1),
     FUN = function(measure) {
       relevant_var <- paste0("only_transit_", measure)
+      relevant_var_log <- paste0(relevant_var, "_log")
       
       if (city == "for") {
         
-        abs_ceiling <- fcase(
-          measure == "CMATT60", 70000,
-          measure == "CMAET60", 30,
-          measure == "CMASB60", 12
+        abs_limit <- fcase(
+          measure == "CMATT60", 100000,
+          measure == "CMAET60", 80,
+          measure == "CMASB60", 30
         )
-        rel_ceiling <- fcase(
-          measure == "CMATT60", 0.2,
-          measure == "CMAET60", 0.12,
-          measure == "CMASB60", 0.2
+        rel_limit <- fcase(
+          measure == "CMATT60", 0.7,
+          measure == "CMAET60", 0.5,
+          measure == "CMASB60", 0.6
         )
         
       } else if (city == "goi") {
         
-        abs_ceiling <- fcase(
-          measure == "CMATT60", 30000,
+        abs_limit <- fcase(
+          measure == "CMATT60", 50000,
           measure == "CMAET60", 8,
           measure == "CMASB60", 5
         )
-        rel_ceiling <- fcase(
-          measure == "CMATT60", 0.1,
+        rel_limit <- fcase(
+          measure == "CMATT60", 0.2,
           measure == "CMAET60", 0.05,
           measure == "CMASB60", 0.05
         )
         
       }
       
-      boxplot_theme <- theme_minimal() +
-        theme(
-          axis.text.x = element_blank(),
-          panel.grid = element_blank(),
-          plot.subtitle = element_markdown(),
-          legend.position = "bottom",
-          legend.text.align = 0.5
+      # function to create the boxplot chart
+      
+      boxplot_maker <- function(method) {
+        
+        access_diff_data <- access_diff[type == method]
+        
+        boxplot_theme <- theme_minimal() +
+          theme(
+            axis.text.x = element_blank(),
+            panel.grid = element_blank(),
+            plot.subtitle = element_markdown(),
+            legend.position = "bottom",
+            legend.text.align = 0.5
+          )
+        
+        palma <- calculate_palma(access_diff_data, relevant_var)
+        
+        limit <- ifelse(method == "abs", abs_limit, rel_limit)
+        show_legend <- ifelse(method == "abs", FALSE, TRUE)
+        y_lab <- ifelse(
+          method == "abs",
+          "Ganho absoluto de acess.",
+          "Ganho relativo de acess."
         )
+        
+        plot <- ggplot(access_diff_data) +
+          geom_segment(
+            aes(
+              x = 0.5, y = 0,
+              xend = 10.5, yend = 0
+            ),
+            color = "gray85"
+          ) +
+          geom_boxplot(
+            aes(
+              as.factor(decil),
+              get(relevant_var),
+              weight = pop,
+              color = as.factor(decil)
+            ),
+            outlier.size = 1.5,
+            outlier.alpha = 0.5,
+            show.legend = show_legend
+          ) +
+          scale_colour_brewer(
+            palette = "RdBu",
+            labels = c("1\nmais pobres", 2:9, "10\nmais ricos"),
+            name = "Decil de renda"
+          ) +
+          scale_y_continuous(labels = scales::number) +
+          scale_x_discrete(limits = factor(1:10)) +
+          guides(color = guide_legend(nrow = 1, label.position = "bottom")) +
+          labs(
+            y = y_lab,
+            x = NULL,
+            subtitle = paste0("**Razao de Palma**: ", palma)
+          ) +
+          coord_cartesian(ylim = c(-limit, limit)) +
+          boxplot_theme
+        
+      }
       
-      # absolute difference
+      abs_plot <- boxplot_maker("abs")
+      rel_plot <- boxplot_maker("rel")
       
-      palma_abs <- calculate_palma(access_diff[type == "abs"], relevant_var)
-      
-      abs_plot <- ggplot(access_diff[type == "abs"]) +
-        geom_boxplot(
-          aes(
-            as.factor(decil),
-            get(relevant_var),
-            weight = pop,
-            color = as.factor(decil)
-          ),
-          outlier.size = 1.5,
-          outlier.alpha = 0.5,
-          show.legend = FALSE
-        ) +
-        scale_colour_brewer(palette = "RdBu") +
-        guides(color = guide_legend(nrow = 1, label.position = "bottom")) +
-        labs(
-          y = "Ganho absoluto de acess.",
-          x = NULL,
-          subtitle = paste0("**Razao de Palma**: ", palma_abs)
-        ) +
-        coord_cartesian(ylim = c(0, abs_ceiling)) +
-        boxplot_theme
-      
-      # relative difference
-      
-      palma_rel <- calculate_palma(access_diff[type == "rel"], relevant_var)
-      
-      rel_plot <- ggplot(access_diff[type == "rel"]) +
-        geom_boxplot(
-          aes(
-            as.factor(decil),
-            get(relevant_var),
-            weight = pop,
-            color = as.factor(decil)
-          ),
-          outlier.size = 1.5,
-          outlier.alpha = 0.5
-        ) +
-        scale_colour_brewer(
-          palette = "RdBu",
-          labels = c("1\nmais pobres", 2:9, "10\nmais ricos"),
-          name = "Decil de renda"
-        ) +
-        scale_y_continuous(labels = scales::percent) +
-        guides(color = guide_legend(nrow = 1, label.position = "bottom")) +
-        labs(
-          y = "Ganho relativo de acess.",
-          x = NULL,
-          subtitle = paste0("**Razao de Palma**: ", palma_rel)
-        ) +
-        coord_cartesian(ylim = c(0, rel_ceiling)) +
-        boxplot_theme
-      
-      # join them, save and return the result so the target follows the file
+      # join plots, save and return the result so the target follows the file
       
       plot <- (abs_plot / rel_plot) +
         plot_layout(heights = c(1, 1))
@@ -346,7 +348,7 @@ create_dist_maps <- function(city, access_paths, grid_path) {
 # access_diff_abs <- tar_read(transit_access_diff_abs)[1]
 # access_diff_rel <- tar_read(transit_access_diff_rel)[1]
 # grid_path <- tar_read(grid_path)[1]
-# measure <- "CMATT60"
+# measure <- "CMAET60"
 create_diff_maps <- function(city,
                              access_diff_abs,
                              access_diff_rel,
@@ -359,7 +361,8 @@ create_diff_maps <- function(city,
   access_diff <- rbind(
     abs = access_diff_abs,
     rel = access_diff_rel,
-    idcol = "type"
+    idcol = "type",
+    fill = TRUE
   )
   access_diff[
     grid,
@@ -436,6 +439,7 @@ create_diff_maps <- function(city,
     FUN.VALUE = character(1),
     FUN = function(measure) {
       relevant_var <- paste0("only_transit_", measure)
+      relevant_var_log <- paste0(relevant_var, "_log")
       
       diff_map_theme <- theme_minimal() +
         theme(
@@ -457,8 +461,7 @@ create_diff_maps <- function(city,
         scales::label_number()
       }
       
-      # legend bar depends on the city, because goi has negative differences and
-      # for doesn't
+      # legend-guide related objects
       
       pal <- "RdBu"
       
@@ -469,7 +472,7 @@ create_diff_maps <- function(city,
       lim_abs <- c(-1, 1) * max_diff_abs
       
       max_diff_rel <- max(
-        abs(access_diff[type == "rel"][[relevant_var]]),
+        abs(access_diff[type == "rel"][[relevant_var_log]]),
         na.rm = TRUE
       )
       lim_rel <- c(-1, 1) * abs(max_diff_rel)
@@ -519,7 +522,7 @@ create_diff_maps <- function(city,
         # ggnewscale::new_scale_fill() +
         geom_sf(
           data = access_diff[access_diff$type == "rel", ],
-          aes(fill = get(relevant_var)),
+          aes(fill = get(relevant_var_log)),
           color = NA
         ) +
         geom_sf(
@@ -533,7 +536,6 @@ create_diff_maps <- function(city,
           palette = pal,
           n.breaks = 4,
           direction = 1,
-          labels = scales::percent_format(),
           limits = lim_rel
         ) +
         labs(subtitle = "Relativa") +
