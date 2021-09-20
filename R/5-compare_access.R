@@ -487,10 +487,10 @@ create_diff_maps <- function(city,
       # absolute difference
       
       abs_plot <- ggplot() +
-        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        # coord_equal() +
-        # scale_fill_identity() +
-        # ggnewscale::new_scale_fill() +
+        geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        coord_equal() +
+        scale_fill_identity() +
+        ggnewscale::new_scale_fill() +
         geom_sf(
           data = access_diff[access_diff$type == "abs", ],
           aes(fill = get(relevant_var)),
@@ -516,10 +516,10 @@ create_diff_maps <- function(city,
       # relative difference
       
       rel_plot <- ggplot() +
-        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        # coord_equal() +
-        # scale_fill_identity() +
-        # ggnewscale::new_scale_fill() +
+        geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        coord_equal() +
+        scale_fill_identity() +
+        ggnewscale::new_scale_fill() +
         geom_sf(
           data = access_diff[access_diff$type == "rel", ],
           aes(fill = get(relevant_var_log)),
@@ -763,10 +763,10 @@ plot_summary <- function(city,
       # first row - "normal" accessibility distribution
       
       row_one <- ggplot() +
-        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        # coord_equal() +
-        # scale_fill_identity() +
-        # ggnewscale::new_scale_fill() +
+        geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        coord_equal() +
+        scale_fill_identity() +
+        ggnewscale::new_scale_fill() +
         geom_sf(
           data = access,
           aes(fill = get(relevant_var)),
@@ -790,14 +790,15 @@ plot_summary <- function(city,
         theme(
           axis.text = element_blank(),
           axis.title.x = element_blank(),
-          panel.grid = element_blank()
-          #,
-          #strip.text = element_text(size = 11) # same size as legend title
+          panel.grid = element_blank(),
+          strip.text = element_text(size = 10)
         )
       
       # function to generate rows with a difference map on the left and a
       # difference boxplot on the right
       
+      # access_diff <- access_diff_abs
+      # method <- "abs"
       diff_row_generator <- function(access_diff, method) {
         
         diff_map_theme <- theme_minimal() +
@@ -815,22 +816,34 @@ plot_summary <- function(city,
             legend.position = "none"
           )
         
+        # objects that depend on the method
+        
+        relevant_var_log <- paste0(relevant_var, "_log")
+        
         title <- ifelse(method == "abs", "Dif. absoluta", "Dif. relativa")
-        label <- ifelse(method == "abs", label_func, scales::percent_format())
-        label_boxplot <- ifelse(
-          method == "abs",
-          scales::number,
-          scales::percent
+        diff_var <- ifelse(method == "abs", relevant_var, relevant_var_log)
+        map_label <- ifelse(method == "abs", label_func, scales::number)
+        
+        # map's legend-guide related objects
+        
+        pal <- "RdBu"
+        
+        max_diff<- max(
+          abs(access_diff[[diff_var]]),
+          na.rm = TRUE
         )
+        lim <- c(-1, 1) * max_diff
+        
+        # map
         
         map_diff <- ggplot() +
-          # geom_raster(data = basemap, aes(x, y, fill = hex)) +
-          # coord_equal() +
-          # scale_fill_identity() +
-          # ggnewscale::new_scale_fill() +
+          geom_raster(data = basemap, aes(x, y, fill = hex)) +
+          coord_equal() +
+          scale_fill_identity() +
+          ggnewscale::new_scale_fill() +
           geom_sf(
             data = access_diff,
-            aes(fill = get(relevant_var)),
+            aes(fill = get(diff_var)),
             color = NA
           ) +
           geom_sf(
@@ -841,32 +854,42 @@ plot_summary <- function(city,
           geom_sf(data = city_shape, fill = NA) +
           scale_fill_distiller(
             name = NULL,
-            palette = "Greens",
-            label = label,
+            palette = pal,
+            label = map_label,
             n.breaks = 4,
-            direction = 1
+            direction = 1,
+            limits = lim
           ) +
           labs(y = title) +
           diff_map_theme
         
+        # boxplot
+        
         ceiling <- fcase(
-          measure == "CMATT60" && method == "abs", 70000,
-          measure == "CMAET60" && method == "abs", 50,
-          measure == "CMASB60" && method == "abs", 15,
-          measure == "CMATT60" && method == "rel", 0.2,
-          measure == "CMAET60" && method == "rel", 0.12,
-          measure == "CMASB60" && method == "rel", 0.2
+          measure == "CMATT60" && method == "abs", 100000,
+          measure == "CMAET60" && method == "abs", 80,
+          measure == "CMASB60" && method == "abs", 30,
+          measure == "CMATT60" && method == "rel", 0.7,
+          measure == "CMAET60" && method == "rel", 0.5,
+          measure == "CMASB60" && method == "rel", 0.6
         )
         
-        palma <- calculate_palma(as.data.table(access_diff), relevant_var)
+        palma <- calculate_palma(as.data.table(access_diff), diff_var)
         
         access_diff <- access_diff[access_diff$decil > 0, ]
         
         boxplot_diff <- ggplot(access_diff) +
+          geom_segment(
+            aes(
+              x = 0.5, y = 0,
+              xend = 10.5, yend = 0
+            ),
+            color = "gray85"
+          ) +
           geom_boxplot(
             aes(
               as.factor(decil),
-              get(relevant_var),
+              get(diff_var),
               weight = pop,
               color = as.factor(decil)
             ),
@@ -875,14 +898,15 @@ plot_summary <- function(city,
             show.legend = FALSE
           ) +
           scale_colour_brewer(palette = "RdBu") +
+          scale_y_continuous(labels = scales::number) +
+          scale_x_discrete(limits = factor(1:10)) +
           labs(
             y = NULL,
             x = NULL,
             subtitle = paste0("**Razao de Palma**: ", palma)
           ) +
-          coord_cartesian(ylim = c(0, ceiling)) +
-          boxplot_theme +
-          scale_y_continuous(labels = label_boxplot)
+          coord_cartesian(ylim = c(-ceiling, ceiling)) +
+          boxplot_theme
         
         cowplot::plot_grid(
           map_diff,
