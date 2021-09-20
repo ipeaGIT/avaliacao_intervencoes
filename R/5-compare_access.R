@@ -444,6 +444,7 @@ create_diff_maps <- function(city,
       diff_map_theme <- theme_minimal() +
         theme(
           legend.position = "bottom",
+          legend.title = element_text(vjust = 1),
           axis.text = element_blank(),
           axis.title = element_blank(),
           panel.grid = element_blank(),
@@ -470,15 +471,16 @@ create_diff_maps <- function(city,
       lim_abs <- c(-1, 1) * max_diff_abs
       
       max_diff_rel <- max(
-        abs(access_diff[type == "rel"][[relevant_var_log]]),
+        abs(access_diff[type == "rel"][[relevant_var]]),
         na.rm = TRUE
       )
-      lim_rel <- c(-1, 1) * abs(max_diff_rel)
+      # lim_rel <- c(-1, 1) * abs(max_diff_rel)
+      lim_rel <- c(-0.5, 1)
       
       # transform sf objects' crs to 3857 so they became "compatible" with the
       # basemap raster
       
-      access_diff <- st_transform(st_sf(access_diff), 3857)
+      access_diff <- setDT(st_transform(st_sf(access_diff), 3857))
       transit_shapes <- st_transform(st_sf(transit_shapes), 3857)
       city_shape <- st_transform(city_shape, 3857)
       
@@ -490,7 +492,7 @@ create_diff_maps <- function(city,
         scale_fill_identity() +
         ggnewscale::new_scale_fill() +
         geom_sf(
-          data = access_diff[access_diff$type == "abs", ],
+          data = st_sf(access_diff[type == "abs", ]),
           aes(fill = get(relevant_var)),
           color = NA
         ) +
@@ -500,18 +502,37 @@ create_diff_maps <- function(city,
           alpha = 0.7
         ) +
         geom_sf(data = city_shape, fill = NA) +
-        scico::scale_fill_scico(
+        scale_fill_gradientn(
           name = "Diferenca de\nacessibilidade",
-          palette = "vik",
-          label = label_func,
+          colours = c("#d46780", "white", "#798234"), # CARTO's ArmyRose
+          limits = lim_abs,
           n.breaks = 4,
-          direction = -1,
-          limits = lim_abs
+          labels = label_func
         ) +
         labs(subtitle = "Absoluta") +
         diff_map_theme
       
       # relative difference
+      
+      expr <- paste(
+        relevant_var,
+        ":= ifelse(", relevant_var, ">1, 1,", relevant_var, ")"
+      )
+      
+      access_diff[
+        type == "rel",
+        eval(parse(text = expr))
+      ]
+      
+      expr <- paste(
+        relevant_var,
+        ":= ifelse(", relevant_var, "< -0.5, -0.5,", relevant_var, ")"
+      )
+      
+      access_diff[
+        type == "rel",
+        eval(parse(text = expr))
+      ]
       
       rel_plot <- ggplot() +
         geom_raster(data = basemap, aes(x, y, fill = hex)) +
@@ -519,8 +540,8 @@ create_diff_maps <- function(city,
         scale_fill_identity() +
         ggnewscale::new_scale_fill() +
         geom_sf(
-          data = access_diff[access_diff$type == "rel", ],
-          aes(fill = get(relevant_var_log)),
+          data = st_sf(access_diff[type == "rel", ]),
+          aes(fill = get(relevant_var)),
           color = NA
         ) +
         geom_sf(
@@ -529,12 +550,12 @@ create_diff_maps <- function(city,
           alpha = 0.7
         ) +
         geom_sf(data = city_shape, fill = NA) +
-        scico::scale_fill_scico(
+        scale_fill_gradientn(
           name = "Diferenca de\nacessibilidade",
-          palette = "vik",
-          n.breaks = 4,
-          direction = -1,
-          limits = lim_rel
+          colours = c("#d46780", "white", "#798234"), # CARTO's ArmyRose
+          values = scales::rescale(c(-0.5, 0, 1)),
+          limits = lim_rel,
+          labels = c("<50%", "0%", "50%", ">100%")
         ) +
         labs(subtitle = "Relativa") +
         diff_map_theme
@@ -940,7 +961,8 @@ plot_summary <- function(city,
         row_two,
         row_three,
         ncol = 1,
-        rel_heights = c(1, 1.2, 1.2)
+        rel_heights = c(1, 1.2, 1.2),
+        labels = c("A)", "B)", "C)")
       )
       
       # save the result and return the path
