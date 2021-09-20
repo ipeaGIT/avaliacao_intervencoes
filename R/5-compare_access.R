@@ -463,8 +463,6 @@ create_diff_maps <- function(city,
       
       # legend-guide related objects
       
-      pal <- "RdBu"
-      
       max_diff_abs <- max(
         abs(access_diff[type == "abs"][[relevant_var]]),
         na.rm = TRUE
@@ -502,12 +500,12 @@ create_diff_maps <- function(city,
           alpha = 0.7
         ) +
         geom_sf(data = city_shape, fill = NA) +
-        scale_fill_distiller(
+        scico::scale_fill_scico(
           name = "Diferenca de\nacessibilidade",
-          palette = pal,
+          palette = "vik",
           label = label_func,
           n.breaks = 4,
-          direction = 1,
+          direction = -1,
           limits = lim_abs
         ) +
         labs(subtitle = "Absoluta") +
@@ -531,11 +529,11 @@ create_diff_maps <- function(city,
           alpha = 0.7
         ) +
         geom_sf(data = city_shape, fill = NA) +
-        scale_fill_distiller(
+        scico::scale_fill_scico(
           name = "Diferenca de\nacessibilidade",
-          palette = pal,
+          palette = "vik",
           n.breaks = 4,
-          direction = 1,
+          direction = -1,
           limits = lim_rel
         ) +
         labs(subtitle = "Relativa") +
@@ -826,8 +824,6 @@ plot_summary <- function(city,
         
         # map's legend-guide related objects
         
-        pal <- "RdBu"
-        
         max_diff<- max(
           abs(access_diff[[diff_var]]),
           na.rm = TRUE
@@ -852,12 +848,12 @@ plot_summary <- function(city,
             alpha = 0.7
           ) +
           geom_sf(data = city_shape, fill = NA) +
-          scale_fill_distiller(
+          scico::scale_fill_scico(
             name = NULL,
-            palette = pal,
+            palette = "vik",
             label = map_label,
             n.breaks = 4,
-            direction = 1,
+            direction = -1,
             limits = lim
           ) +
           labs(y = title) +
