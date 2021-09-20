@@ -760,11 +760,11 @@ plot_summary <- function(city,
       
       # first row - "normal" accessibility distribution
       
-      row_one <- ggplot() +
-        geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        coord_equal() +
-        scale_fill_identity() +
-        ggnewscale::new_scale_fill() +
+      map_dist <- ggplot() +
+        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        # coord_equal() +
+        # scale_fill_identity() +
+        # ggnewscale::new_scale_fill() +
         geom_sf(
           data = access,
           aes(fill = get(relevant_var)),
@@ -792,6 +792,13 @@ plot_summary <- function(city,
           strip.text = element_text(size = 10)
         )
       
+      row_one <- cowplot::plot_grid(
+        map_dist, 
+        NULL,
+        nrow = 1,
+        rel_widths = c(1, 0.1)
+      )
+      
       # function to generate rows with a difference map on the left and a
       # difference boxplot on the right
       
@@ -804,14 +811,18 @@ plot_summary <- function(city,
             axis.text = element_blank(),
             axis.title.x = element_blank(),
             panel.grid = element_blank(),
-            plot.subtitle = element_text(hjust = 0.5)
+            plot.subtitle = element_text(hjust = 0.5),
+            legend.position = "bottom",
+            legend.box.spacing = unit(0, "pt")
           )
         
         boxplot_theme <- theme_minimal() +
           theme(
             panel.grid = element_blank(),
+            axis.text.x = element_blank(),
             plot.subtitle = element_markdown(),
-            legend.position = "none"
+            legend.position = "bottom",
+            legend.title = element_blank()
           )
         
         # objects that depend on the method
@@ -833,10 +844,10 @@ plot_summary <- function(city,
         # map
         
         map_diff <- ggplot() +
-          geom_raster(data = basemap, aes(x, y, fill = hex)) +
-          coord_equal() +
-          scale_fill_identity() +
-          ggnewscale::new_scale_fill() +
+          # geom_raster(data = basemap, aes(x, y, fill = hex)) +
+          # coord_equal() +
+          # scale_fill_identity() +
+          # ggnewscale::new_scale_fill() +
           geom_sf(
             data = access_diff,
             aes(fill = get(diff_var)),
@@ -891,14 +902,15 @@ plot_summary <- function(city,
             ),
             outlier.size = 1.5,
             outlier.alpha = 0.5,
-            show.legend = FALSE
+            show.legend = TRUE
           ) +
           scale_colour_brewer(palette = "RdBu") +
           scale_y_continuous(labels = scales::number) +
           scale_x_discrete(limits = factor(1:10)) +
+          guides(color = guide_legend(nrow = 1, label.position = "bottom")) +
           labs(
             y = NULL,
-            x = NULL,
+            x = "Decil de renda",
             subtitle = paste0("**Razao de Palma**: ", palma)
           ) +
           coord_cartesian(ylim = c(-ceiling, ceiling)) +
@@ -908,7 +920,7 @@ plot_summary <- function(city,
           map_diff,
           boxplot_diff,
           nrow = 1,
-          rel_widths = c(1.5, 1)
+          rel_widths = c(0.7, 1)
         )
         
       }
@@ -928,7 +940,7 @@ plot_summary <- function(city,
         row_two,
         row_three,
         ncol = 1,
-        rel_heights = c(1, 1.1, 1.1)
+        rel_heights = c(1, 1.2, 1.2)
       )
       
       # save the result and return the path
