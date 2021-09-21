@@ -349,7 +349,7 @@ create_dist_maps <- function(city, access_paths, grid_path) {
 # access_diff_abs <- tar_read(transit_access_diff_abs)[1]
 # access_diff_rel <- tar_read(transit_access_diff_rel)[1]
 # grid_path <- tar_read(grid_path)[1]
-# measure <- "CMAET60"
+# measure <- "CMATT60"
 create_diff_maps <- function(city,
                              access_diff_abs,
                              access_diff_rel,
@@ -498,10 +498,11 @@ create_diff_maps <- function(city,
           alpha = 0.7
         ) +
         geom_sf(data = city_shape, fill = NA) +
-        scale_fill_gradientn(
+        scale_fill_distiller(
           name = "Diferenca de\nacessibilidade",
-          colours = c("#d46780", "white", "#798234"), # CARTO's ArmyRose
+          palette = "BrBG",
           limits = lim_abs,
+          direction = 1,
           n.breaks = 4,
           labels = label_func
         ) +
@@ -512,17 +513,16 @@ create_diff_maps <- function(city,
       # smaller than -50%, truncate the values
       
       access_diff[
-        type == "rel",
-        eval(relevant_var_treated) := ifelse(
-          get(relevant_var) > 1, 1, get(relevant_var)
-        )
+        type == "rel" & get(relevant_var) > 1,
+        eval(relevant_var_treated) := 1
       ]
-      
       access_diff[
-        type == "rel",
-        eval(relevant_var_treated) := ifelse(
-          get(relevant_var) < -0.5, -0.5, get(relevant_var)
-        )
+        type == "rel" & get(relevant_var) < -0.5,
+        eval(relevant_var_treated) := -0.5
+      ]
+      access_diff[
+        type == "rel" & get(relevant_var) >= -0.5 & get(relevant_var) <= 1,
+        eval(relevant_var_treated) := get(relevant_var)
       ]
       
       rel_plot <- ggplot() +
@@ -541,11 +541,12 @@ create_diff_maps <- function(city,
           alpha = 0.7
         ) +
         geom_sf(data = city_shape, fill = NA) +
-        scale_fill_gradientn(
+        scale_fill_distiller(
           name = "Diferenca de\nacessibilidade",
-          colours = c("#d46780", "white", "#798234"), # CARTO's ArmyRose
+          palette = "BrBG",
           values = scales::rescale(c(-0.5, 0, 1)),
           limits = lim_rel,
+          direction = 1,
           labels = c("<50%", "0%", "50%", ">100%")
         ) +
         labs(subtitle = "Relativa") +
@@ -773,10 +774,10 @@ plot_summary <- function(city,
       # first row - "normal" accessibility distribution
       
       map_dist <- ggplot() +
-        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        # coord_equal() +
-        # scale_fill_identity() +
-        # ggnewscale::new_scale_fill() +
+        geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        coord_equal() +
+        scale_fill_identity() +
+        ggnewscale::new_scale_fill() +
         geom_sf(
           data = access,
           aes(fill = get(relevant_var)),
@@ -842,16 +843,16 @@ plot_summary <- function(city,
         relevant_var_treated <- paste0(relevant_var, "_treated")
         
         access_diff[
-          ,
-          eval(relevant_var_treated) := ifelse(
-            get(relevant_var) > 1, 1, get(relevant_var)
-          )
+          get(relevant_var) > 1,
+          eval(relevant_var_treated) := 1
         ]
         access_diff[
-          ,
-          eval(relevant_var_treated) := ifelse(
-            get(relevant_var) < -0.5, -0.5, get(relevant_var)
-          )
+          get(relevant_var) < -0.5,
+          eval(relevant_var_treated) := -0.5
+        ]
+        access_diff[
+          get(relevant_var) >= -0.5 & get(relevant_var) <= 1,
+          eval(relevant_var_treated) := get(relevant_var)
         ]
         
         title <- ifelse(method == "abs", "Dif. absoluta", "Dif. relativa")
@@ -876,10 +877,10 @@ plot_summary <- function(city,
         # map
         
         map_diff <- ggplot() +
-          # geom_raster(data = basemap, aes(x, y, fill = hex)) +
-          # coord_equal() +
-          # scale_fill_identity() +
-          # ggnewscale::new_scale_fill() +
+          geom_raster(data = basemap, aes(x, y, fill = hex)) +
+          coord_equal() +
+          scale_fill_identity() +
+          ggnewscale::new_scale_fill() +
           geom_sf(
             data = st_sf(access_diff),
             aes(fill = get(diff_var)),
@@ -891,12 +892,13 @@ plot_summary <- function(city,
             alpha = 0.7
           ) +
           geom_sf(data = city_shape, fill = NA) +
-          scale_fill_gradientn(
+          scale_fill_distiller(
             name = NULL,
-            colours = c("#d46780", "white", "#798234"), # CARTO's ArmyRose
+            palette = "BrBG",
             labels = map_label,
             values = values,
             n.breaks = 4,
+            direction = 1,
             limits = lim
           ) +
           labs(y = title) +
