@@ -105,7 +105,7 @@ create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
             show.legend = show_legend
           ) +
           scale_colour_brewer(
-            palette = "RdBu",
+            palette = "BrBG",
             labels = c("1\nmais pobres", 2:9, "10\nmais ricos"),
             name = "Decil de renda"
           ) +
@@ -281,10 +281,10 @@ create_dist_maps <- function(city, access_paths, grid_path) {
       }
       
       plot <- ggplot() +
-        geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        coord_equal() +
-        scale_fill_identity() +
-        ggnewscale::new_scale_fill() +
+        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        # coord_equal() +
+        # scale_fill_identity() +
+        # ggnewscale::new_scale_fill() +
         geom_sf(
           data = access,
           aes(fill = get(relevant_var)),
@@ -483,10 +483,10 @@ create_diff_maps <- function(city,
       # absolute difference
       
       abs_plot <- ggplot() +
-        geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        coord_equal() +
-        scale_fill_identity() +
-        ggnewscale::new_scale_fill() +
+        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        # coord_equal() +
+        # scale_fill_identity() +
+        # ggnewscale::new_scale_fill() +
         geom_sf(
           data = st_sf(access_diff[type == "abs", ]),
           aes(fill = get(relevant_var)),
@@ -500,7 +500,7 @@ create_diff_maps <- function(city,
         geom_sf(data = city_shape, fill = NA) +
         scale_fill_distiller(
           name = "Diferenca de\nacessibilidade",
-          palette = "BrBG",
+          palette = "RdBu",
           limits = lim_abs,
           direction = 1,
           n.breaks = 4,
@@ -526,10 +526,10 @@ create_diff_maps <- function(city,
       ]
       
       rel_plot <- ggplot() +
-        geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        coord_equal() +
-        scale_fill_identity() +
-        ggnewscale::new_scale_fill() +
+        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        # coord_equal() +
+        # scale_fill_identity() +
+        # ggnewscale::new_scale_fill() +
         geom_sf(
           data = st_sf(access_diff[type == "rel", ]),
           aes(fill = get(relevant_var_treated)),
@@ -543,7 +543,7 @@ create_diff_maps <- function(city,
         geom_sf(data = city_shape, fill = NA) +
         scale_fill_distiller(
           name = "Diferenca de\nacessibilidade",
-          palette = "BrBG",
+          palette = "RdBu",
           values = scales::rescale(c(-0.5, 0, 1)),
           limits = lim_rel,
           direction = 1,
@@ -774,10 +774,10 @@ plot_summary <- function(city,
       # first row - "normal" accessibility distribution
       
       map_dist <- ggplot() +
-        geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        coord_equal() +
-        scale_fill_identity() +
-        ggnewscale::new_scale_fill() +
+        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
+        # coord_equal() +
+        # scale_fill_identity() +
+        # ggnewscale::new_scale_fill() +
         geom_sf(
           data = access,
           aes(fill = get(relevant_var)),
@@ -877,10 +877,10 @@ plot_summary <- function(city,
         # map
         
         map_diff <- ggplot() +
-          geom_raster(data = basemap, aes(x, y, fill = hex)) +
-          coord_equal() +
-          scale_fill_identity() +
-          ggnewscale::new_scale_fill() +
+          # geom_raster(data = basemap, aes(x, y, fill = hex)) +
+          # coord_equal() +
+          # scale_fill_identity() +
+          # ggnewscale::new_scale_fill() +
           geom_sf(
             data = st_sf(access_diff),
             aes(fill = get(diff_var)),
@@ -894,7 +894,7 @@ plot_summary <- function(city,
           geom_sf(data = city_shape, fill = NA) +
           scale_fill_distiller(
             name = NULL,
-            palette = "BrBG",
+            palette = "RdBu",
             labels = map_label,
             values = values,
             n.breaks = 4,
@@ -939,7 +939,7 @@ plot_summary <- function(city,
             outlier.alpha = 0.5,
             show.legend = TRUE
           ) +
-          scale_colour_brewer(palette = "RdBu") +
+          scale_colour_brewer(palette = "BrBG") +
           scale_y_continuous(labels = label) +
           scale_x_discrete(limits = factor(1:10)) +
           guides(color = guide_legend(nrow = 1, label.position = "bottom")) +
