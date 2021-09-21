@@ -29,7 +29,6 @@ create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
     FUN.VALUE = character(1),
     FUN = function(measure) {
       relevant_var <- paste0("only_transit_", measure)
-      relevant_var_log <- paste0(relevant_var, "_log")
       
       if (city == "for") {
         
@@ -76,6 +75,8 @@ create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
         
         palma <- calculate_palma(access_diff_data, relevant_var)
         
+        label <- ifelse(method == "abs", scales::number, scales::percent)
+        
         limit <- ifelse(method == "abs", abs_limit, rel_limit)
         show_legend <- ifelse(method == "abs", FALSE, TRUE)
         y_lab <- ifelse(
@@ -108,7 +109,7 @@ create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
             labels = c("1\nmais pobres", 2:9, "10\nmais ricos"),
             name = "Decil de renda"
           ) +
-          scale_y_continuous(labels = scales::number) +
+          scale_y_continuous(labels = label) +
           scale_x_discrete(limits = factor(1:10)) +
           guides(color = guide_legend(nrow = 1, label.position = "bottom")) +
           labs(
@@ -439,7 +440,7 @@ create_diff_maps <- function(city,
     FUN.VALUE = character(1),
     FUN = function(measure) {
       relevant_var <- paste0("only_transit_", measure)
-      relevant_var_log <- paste0(relevant_var, "_log")
+      relevant_var_treated <- paste0(relevant_var, "_treated")
       
       diff_map_theme <- theme_minimal() +
         theme(
@@ -469,12 +470,7 @@ create_diff_maps <- function(city,
         na.rm = TRUE
       )
       lim_abs <- c(-1, 1) * max_diff_abs
-      
-      max_diff_rel <- max(
-        abs(access_diff[type == "rel"][[relevant_var]]),
-        na.rm = TRUE
-      )
-      # lim_rel <- c(-1, 1) * abs(max_diff_rel)
+
       lim_rel <- c(-0.5, 1)
       
       # transform sf objects' crs to 3857 so they became "compatible" with the
@@ -512,26 +508,21 @@ create_diff_maps <- function(city,
         labs(subtitle = "Absoluta") +
         diff_map_theme
       
-      # relative difference
-      
-      expr <- paste(
-        relevant_var,
-        ":= ifelse(", relevant_var, ">1, 1,", relevant_var, ")"
-      )
+      # relative difference - first treat the variable. if greater than 100% or
+      # smaller than -50%, truncate the values
       
       access_diff[
         type == "rel",
-        eval(parse(text = expr))
+        eval(relevant_var_treated) := ifelse(
+          get(relevant_var) > 1, 1, get(relevant_var)
+        )
       ]
       
-      expr <- paste(
-        relevant_var,
-        ":= ifelse(", relevant_var, "< -0.5, -0.5,", relevant_var, ")"
-      )
-      
       access_diff[
         type == "rel",
-        eval(parse(text = expr))
+        eval(relevant_var_treated) := ifelse(
+          get(relevant_var) < -0.5, -0.5, get(relevant_var)
+        )
       ]
       
       rel_plot <- ggplot() +
@@ -541,7 +532,7 @@ create_diff_maps <- function(city,
         ggnewscale::new_scale_fill() +
         geom_sf(
           data = st_sf(access_diff[type == "rel", ]),
-          aes(fill = get(relevant_var)),
+          aes(fill = get(relevant_var_treated)),
           color = NA
         ) +
         geom_sf(
@@ -753,8 +744,8 @@ plot_summary <- function(city,
   # basemap raster
   
   access <- st_transform(st_sf(access), 3857)
-  access_diff_abs <- st_transform(st_sf(access_diff_abs), 3857)
-  access_diff_rel <- st_transform(st_sf(access_diff_rel), 3857)
+  access_diff_abs <- setDT(st_transform(st_sf(access_diff_abs), 3857))
+  access_diff_rel <- setDT(st_transform(st_sf(access_diff_rel), 3857))
   transit_shapes <- st_transform(st_sf(transit_shapes), 3857)
   city_shape <- st_transform(city_shape, 3857)
   
@@ -823,8 +814,8 @@ plot_summary <- function(city,
       # function to generate rows with a difference map on the left and a
       # difference boxplot on the right
       
-      # access_diff <- access_diff_abs
-      # method <- "abs"
+      # access_diff <- access_diff_rel
+      # method <- "rel"
       diff_row_generator <- function(access_diff, method) {
         
         diff_map_theme <- theme_minimal() +
@@ -848,11 +839,29 @@ plot_summary <- function(city,
         
         # objects that depend on the method
         
-        relevant_var_log <- paste0(relevant_var, "_log")
+        relevant_var_treated <- paste0(relevant_var, "_treated")
+        
+        access_diff[
+          ,
+          eval(relevant_var_treated) := ifelse(
+            get(relevant_var) > 1, 1, get(relevant_var)
+          )
+        ]
+        access_diff[
+          ,
+          eval(relevant_var_treated) := ifelse(
+            get(relevant_var) < -0.5, -0.5, get(relevant_var)
+          )
+        ]
         
         title <- ifelse(method == "abs", "Dif. absoluta", "Dif. relativa")
-        diff_var <- ifelse(method == "abs", relevant_var, relevant_var_log)
-        map_label <- ifelse(method == "abs", label_func, scales::number)
+        diff_var <- ifelse(method == "abs", relevant_var, relevant_var_treated)
+        
+        map_label <- label_func
+        if (method == "rel") map_label <- c("<50%", "0%", "50%", ">100%")
+        
+        values <- NULL
+        if (method == "rel") values <- scales::rescale(c(-0.5, 0, 1))
         
         # map's legend-guide related objects
         
@@ -862,6 +871,8 @@ plot_summary <- function(city,
         )
         lim <- c(-1, 1) * max_diff
         
+        if (method == "rel") lim <- c(-0.5, 1.0)
+        
         # map
         
         map_diff <- ggplot() +
@@ -870,7 +881,7 @@ plot_summary <- function(city,
           # scale_fill_identity() +
           # ggnewscale::new_scale_fill() +
           geom_sf(
-            data = access_diff,
+            data = st_sf(access_diff),
             aes(fill = get(diff_var)),
             color = NA
           ) +
@@ -880,12 +891,12 @@ plot_summary <- function(city,
             alpha = 0.7
           ) +
           geom_sf(data = city_shape, fill = NA) +
-          scico::scale_fill_scico(
+          scale_fill_gradientn(
             name = NULL,
-            palette = "vik",
-            label = map_label,
+            colours = c("#d46780", "white", "#798234"), # CARTO's ArmyRose
+            labels = map_label,
+            values = values,
             n.breaks = 4,
-            direction = -1,
             limits = lim
           ) +
           labs(y = title) +
@@ -901,10 +912,11 @@ plot_summary <- function(city,
           measure == "CMAET60" && method == "rel", 0.5,
           measure == "CMASB60" && method == "rel", 0.6
         )
+        label <- ifelse(method == "abs", scales::number, scales::percent)
         
-        palma <- calculate_palma(as.data.table(access_diff), diff_var)
+        palma <- calculate_palma(access_diff, relevant_var)
         
-        access_diff <- access_diff[access_diff$decil > 0, ]
+        access_diff <- access_diff[decil > 0, ]
         
         boxplot_diff <- ggplot(access_diff) +
           geom_segment(
@@ -917,7 +929,7 @@ plot_summary <- function(city,
           geom_boxplot(
             aes(
               as.factor(decil),
-              get(diff_var),
+              get(relevant_var),
               weight = pop,
               color = as.factor(decil)
             ),
@@ -926,7 +938,7 @@ plot_summary <- function(city,
             show.legend = TRUE
           ) +
           scale_colour_brewer(palette = "RdBu") +
-          scale_y_continuous(labels = scales::number) +
+          scale_y_continuous(labels = label) +
           scale_x_discrete(limits = factor(1:10)) +
           guides(color = guide_legend(nrow = 1, label.position = "bottom")) +
           labs(
