@@ -1,4 +1,4 @@
-options(java.parameters = '-Xmx10G')
+options(java.parameters = '-Xmx50G')
 library(r5r)
 
 

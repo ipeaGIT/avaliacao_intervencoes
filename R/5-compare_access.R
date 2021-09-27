@@ -204,8 +204,8 @@ compare_access <- function(sigla_muni, modo_acesso) {
       group_by(ind) %>%
       summarise(dif_abs = max(abs(dif_abs), na.rm = TRUE),
                 dif_rel = max(abs(dif_rel), na.rm = TRUE),
-                dif_abs_tc = max(abs(dif_abs_tc), na.rm = TRUE),
-                dif_rel_tc = max(abs(dif_rel_tc), na.rm = TRUE)
+                # dif_abs_tc = max(abs(dif_abs_tc), na.rm = TRUE),
+                # dif_rel_tc = max(abs(dif_rel_tc), na.rm = TRUE)
                 ) %>% setDT()
     
     # library(BAMMtools)
@@ -255,8 +255,8 @@ compare_access <- function(sigla_muni, modo_acesso) {
            fill = "")
     
     map3 <- create_map_acess(dif_abs)+
-      scale_fill_distiller(palette = "PuBu", direction = 1, labels = labelss
-                           # limits = c(-1,1)*limits_ind$dif_abs_tc
+      scale_fill_distiller(palette = "RdBu", direction = 1, labels = labelss,
+                           limits = c(-1,1)*limits_ind$dif_abs
                            # breaks = c(-30000, 0, 30000),
                            # labels = c("-30 mil", 0, "30 mil")
       )+

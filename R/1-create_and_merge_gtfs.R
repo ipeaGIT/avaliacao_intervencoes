@@ -87,18 +87,19 @@ metrofor_new_frequency <- data.frame(
 # lines to be changed frequency
 gtfs_metrofor_new <- change_trip_frequency(a, 
                                            routes = metrofor_new_frequency$route_id, 
-                                           new_freqs = metrofor_new_frequency$frequency)
+                                           new_freqs = metrofor_new_frequency$frequency,
+                                           services = "")
 
 
 # export gtfs
-gtfstools::write_gtfs(a, path = "../../data/avaliacao_intervencoes/for/gtfs_for_metrofor_2021-01_depois.zip")
+gtfstools::write_gtfs(a, path = "../../data/avaliacao_intervencoes/for/gtfs/gtfs_for_metrofor_2021-01_depois.zip")
 
 
 
 # change frequency of lines - etufor ------------------
 
 # Open gtfs
-gtfs_etufor <- read_gtfs("../../data-raw/avaliacao_intervencoes/for/gtfs_for_etufor_2019-10.zip")
+gtfs_etufor <- read_gtfs("../../data-raw/avaliacao_intervencoes/for/gtfs/gtfs_for_etufor_2019-10.zip")
 
 # open data with the new frequencies
 linhas_mudancas <- fread("../../data/avaliacao_intervencoes/for/etufor_linhas_mudancas.csv",
@@ -125,6 +126,13 @@ gtfs_etufor_new <- gtfstools::filter_route_id(gtfs_etufor_new,
                                               route_ids = linhas_mudancas_delete$cod_linha,
                                               keep = FALSE)
                                               
+
+
+# export gtfs
+gtfstools::write_gtfs(gtfs_etufor_new, path = "../../data/avaliacao_intervencoes/for/gtfs/gtfs_for_etufor_2019-10_depois.zip")
+
+
+
 
 
 

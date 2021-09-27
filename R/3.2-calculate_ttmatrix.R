@@ -48,7 +48,7 @@ calculate_ttmatrix <- function(sigla_muni, modo_acesso, departure = "02-03-2020 
   
   points <- fread(sprintf("../../data/avaliacao_intervencoes/r5/points/points_%s_09_2019.csv", sigla_muni)) %>% dplyr::select(id = id_hex, lat = Y, lon = X)
   mode <- c(modo_acesso, "TRANSIT")
-  max_walk_dist <- 3000   # meters
+  max_walk_dist <- 1000   # meters
   max_trip_duration <- 180 # minutes
   departure_datetime <- as.POSIXct(departure, format = "%d-%m-%Y %H:%M:%S")
   
