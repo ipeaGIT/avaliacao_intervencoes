@@ -7,20 +7,18 @@ library(mapview)
 library(Hmisc)
 library(googlesheets4) # install.packages("googlesheets4")
 library(gtfstools) # install.packages('gtfstools')
-source("R/fun/break_line_points.R")
-source("R/fun/crop_line_btw_points.R")
 # 
 # 
 # 
 # 1) Fortaleza - metro linha leste ex-ante ---------------------------------------------------
 
-gtfs <- "../../data-raw/avaliacao_intervencoes/for/gtfs_for_metrofor_2021-01.zip"
-gtfs <- "../../data-raw/avaliacao_intervencoes/for/gtfs_for_etufor_2019-10.zip"
+# gtfs <- "../../data-raw/avaliacao_intervencoes/for/gtfs_for_metrofor_2021-01.zip"
+gtfs <- "../../data-raw/avaliacao_intervencoes/for/gtfs/gtfs_for_etufor_2019-10.zip"
 # lines to be changed frequency
 gtfs <- read_gtfs(gtfs)
 
 # identify lines to change frequency
-routes_metrofor <- gtfs$routes %>% select(route_id, route_long_name)
+# routes_metrofor <- gtfs$routes %>% select(route_id, route_long_name)
 
 # # table with new frequency
 # metrofor_new_frequency <- data.frame(
@@ -28,11 +26,25 @@ routes_metrofor <- gtfs$routes %>% select(route_id, route_long_name)
 #   frequency = c(7.5, 6, 20)
 # )
 
+# open data with the new frequencies
+# linhas_mudancas <- fread("../../data/avaliacao_intervencoes/for/etufor_linhas_mudancas.csv",
+#                          colClasses = "character")
+# pegar somente linhas que nao vao ser excluidas
+# table(linhas_mudancas$parecer, useNA = 'always')
+# linhas_mudancas_stay <- linhas_mudancas %>% filter(parecer != "Eliminada")
+# filter: removed 95 rows (31%), 212 rows remaining
+# linhas_mudancas_stay <- linhas_mudancas_stay %>% filter(!is.na(intervalo_entre_partidas_min_9))
+# linhas_mudancas_stay <- linhas_mudancas_stay %>% filter(intervalo_entre_partidas_min_9 != "")
+# filter: removed 6 rows (3%), 206 rows remaining
+# mudar frequencia
+
+
+
 
 
 change_trip_frequency <- function(gtfs, routes, new_freqs, services) {
   
-  # routes <- c("026", "045"); new_freqs <- c(4.6; 5.5) services <- "U"
+  # routes <- c("026", "045"); new_freqs <- c(4.6, 5.5); services <- "U"
   # routes = linhas_mudancas_stay$cod_linha; new_freqs = linhas_mudancas_stay$intervalo_entre_partidas_min_9
   
   # get trips
@@ -56,6 +68,7 @@ change_trip_frequency <- function(gtfs, routes, new_freqs, services) {
     # new_freq <- 7.5
     # route_id1 <- "026"; new_freq <- 4.6; services <- "U"
     # route_id1 <- routes[93]; new_freq <- new_freqs[93]; services <- "U"
+    # route_id1 <- routes[1]; new_freq <- new_freqs[1]
     
     new_freq_sec <- as.numeric(new_freq) * 60
     
@@ -139,7 +152,7 @@ change_trip_frequency <- function(gtfs, routes, new_freqs, services) {
       # mutate(arrival_time = arrival_time2) %>%
       mutate(arrival_time = as.character(arrival_time)) %>%
       mutate(departure_time = arrival_time) %>%
-      select(trip_id, direction_id, arrival_time, departure_time, stop_sequence, stop_id, route_id, service_id)
+      dplyr::select(trip_id, direction_id, arrival_time, departure_time, stop_sequence, stop_id, route_id, service_id)
     
     
     # output: route's stop_times with the new frequency
@@ -160,19 +173,19 @@ change_trip_frequency <- function(gtfs, routes, new_freqs, services) {
     setorder(stop_times_end, direction_id, arrival_time_first)
     
     
-    stop_times_end <- stop_times_end %>% 
-      select(-route_id, -arrival_time_first, -direction_id, -service_id)
+    # stop_times_end <- stop_times_end %>% 
+    # dplyr::select(-route_id, -arrival_time_first, -direction_id)
     
     
     
     
     # setup new trips ---------------------------------------------------------
-    trips_new <- distinct( stop_times_new_ttime, trip_id, direction_id, route_id)
+    trips_new <- distinct( stop_times_new_ttime, trip_id, direction_id, route_id, service_id)
     
     
     
     # get other vars
-    trips_vars <- distinct(trips, route_id, direction_id, .keep_all = TRUE) %>% select(-trip_id)
+    trips_vars <- distinct(trips, route_id, direction_id, .keep_all = TRUE) %>% dplyr::select(-trip_id, -service_id)
     trips_new <- left_join(trips_new,
                            trips_vars,
                            by = c("route_id", "direction_id"))
@@ -188,6 +201,7 @@ change_trip_frequency <- function(gtfs, routes, new_freqs, services) {
     # output
     frequency_new <- list(
       stop_times = stop_times_end,
+      # stop_times = list(stop_times_end, nrow(stop_times), nrow(stop_times_end)),
       trips = trips_end
     )
     
@@ -207,17 +221,22 @@ change_trip_frequency <- function(gtfs, routes, new_freqs, services) {
   # apply rbindlist inside both "stop_times" and "trips"
   ui <- lapply(ui, rbindlist)
   
+  # get routes that were sucessufly updated
+  routes_ok <- unique(ui$stop_times$route_id)
+  
   # bring new files to the full ones ----------------------------
   stop_times_complete <- rbind(
     # get the original stop_times and delete trips from the modified routes
-    stop_times[route_id %nin% routes],
-    go$stop_times
+    stop_times[route_id %nin% routes_ok],
+    ui$stop_times,
+    fill = TRUE
   )
   
   trips_complete <- rbind(
     # get the original trips and delete trips from the modified routes
-    trips[route_id %nin% routes],
-    go$trips
+    trips[route_id %nin% routes_ok],
+    ui$trips,
+    fill = TRUE
   )
   
   
@@ -227,7 +246,7 @@ change_trip_frequency <- function(gtfs, routes, new_freqs, services) {
   # so we must delete them
   
   stop_times_complete <- stop_times_complete %>% 
-    select(-route_id, -direction_id, -service_id)
+    dplyr::select(-route_id, -direction_id, -service_id)
   
   # combine new gtfs files ----------------------------------------------------------------------
   
