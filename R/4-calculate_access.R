@@ -79,9 +79,9 @@ calculate_accessibility <- function(threshold, ttm, opportunities) {
     transit_access,
     on = "fromId",
     `:=`(
-      only_transit_CMATT60 = i.total_jobs,
-      only_transit_CMAET60 = i.total_edu,
-      only_transit_CMASB60 = i.basic_health
+      only_transit_CMATT = i.total_jobs,
+      only_transit_CMAET = i.total_edu,
+      only_transit_CMASB = i.basic_health
     )
   ]
   
@@ -103,9 +103,9 @@ calculate_accessibility <- function(threshold, ttm, opportunities) {
       only_bike_access,
       on = "fromId",
       `:=`(
-        only_bike_CMATT60 = i.total_jobs,
-        only_bike_CMAET60 = i.total_edu,
-        only_bike_CMASB60 = i.basic_health
+        only_bike_CMATT = i.total_jobs,
+        only_bike_CMAET = i.total_edu,
+        only_bike_CMASB = i.basic_health
       )
     ]
     
@@ -119,9 +119,9 @@ calculate_accessibility <- function(threshold, ttm, opportunities) {
       only_bfm_access,
       on = "fromId",
       `:=`(
-        only_bfm_CMATT60 = i.total_jobs,
-        only_bfm_CMAET60 = i.total_edu,
-        only_bfm_CMASB60 = i.basic_health
+        only_bfm_CMATT = i.total_jobs,
+        only_bfm_CMAET = i.total_edu,
+        only_bfm_CMASB = i.basic_health
       )
     ]
     
@@ -135,9 +135,9 @@ calculate_accessibility <- function(threshold, ttm, opportunities) {
       transit_bike_access,
       on = "fromId",
       `:=`(
-        transit_bike_CMATT60 = i.total_jobs,
-        transit_bike_CMAET60 = i.total_edu,
-        transit_bike_CMASB60 = i.basic_health
+        transit_bike_CMATT = i.total_jobs,
+        transit_bike_CMAET = i.total_edu,
+        transit_bike_CMASB = i.basic_health
       )
     ]
     
@@ -151,9 +151,9 @@ calculate_accessibility <- function(threshold, ttm, opportunities) {
       all_modes_access,
       on = "fromId",
       `:=`(
-        all_modes_CMATT60 = i.total_jobs,
-        all_modes_CMAET60 = i.total_edu,
-        all_modes_CMASB60 = i.basic_health
+        all_modes_CMATT = i.total_jobs,
+        all_modes_CMAET = i.total_edu,
+        all_modes_CMASB = i.basic_health
       )
     ]
     
@@ -180,11 +180,11 @@ calculate_access_diff <- function(city,
   # much because there are very few places with 0 accessibility and they all
   # have 0 accessibility in both scenarios)
   
-  access_cols <- setdiff(names(access[[1]]), "fromId")
+  access_cols <- setdiff(names(access[[1]]), c("fromId", "travel_time"))
   setnames(access[[1]], old = access_cols, new = paste0(access_cols, "_antes"))
   setnames(access[[2]], old = access_cols, new = paste0(access_cols, "_depois"))
   
-  access_diff <- access[[1]][access[[2]], on = "fromId"]
+  access_diff <- access[[1]][access[[2]], on = c("fromId", "travel_time")]
   
   if (method == "absolute") {
     

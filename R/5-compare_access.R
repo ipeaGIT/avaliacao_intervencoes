@@ -2,7 +2,7 @@
 # access_diff_abs <- tar_read(transit_access_diff_abs)[2]
 # access_diff_rel <- tar_read(transit_access_diff_rel)[2]
 # grid_path <- tar_read(grid_path)[2]
-# measure <- "CMAET60"
+# measure <- "CMAET"
 create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
   
   access_diff_abs <- readRDS(access_diff_abs)
@@ -22,7 +22,7 @@ create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
   ]
   access_diff <- access_diff[decil > 0]
   
-  measures <- c("CMATT60", "CMAET60", "CMASB60")
+  measures <- c("CMATT", "CMAET", "CMASB")
   
   paths <- vapply(
     measures,
@@ -33,27 +33,27 @@ create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
       if (city == "for") {
         
         abs_limit <- fcase(
-          measure == "CMATT60", 100000,
-          measure == "CMAET60", 80,
-          measure == "CMASB60", 30
+          measure == "CMATT", 100000,
+          measure == "CMAET", 80,
+          measure == "CMASB", 30
         )
         rel_limit <- fcase(
-          measure == "CMATT60", 0.7,
-          measure == "CMAET60", 0.5,
-          measure == "CMASB60", 0.6
+          measure == "CMATT", 0.7,
+          measure == "CMAET", 0.5,
+          measure == "CMASB", 0.6
         )
         
       } else if (city == "goi") {
         
         abs_limit <- fcase(
-          measure == "CMATT60", 50000,
-          measure == "CMAET60", 8,
-          measure == "CMASB60", 5
+          measure == "CMATT", 50000,
+          measure == "CMAET", 8,
+          measure == "CMASB", 5
         )
         rel_limit <- fcase(
-          measure == "CMATT60", 0.2,
-          measure == "CMAET60", 0.05,
-          measure == "CMASB60", 0.05
+          measure == "CMATT", 0.2,
+          measure == "CMAET", 0.05,
+          measure == "CMASB", 0.05
         )
         
       }
@@ -176,16 +176,21 @@ calculate_palma <- function(access_diff, relevant_var) {
 # city <- "for"
 # access_paths <- tar_read(access_metadata)$access_file[1:2]
 # grid_path <- tar_read(grid_path)[1]
-# measure <- "CMATT60"
-create_dist_maps <- function(city, access_paths, grid_path) {
+# measure <- "CMATT"
+# travel_time <- 60
+create_dist_maps <- function(city, access_paths, grid_path, travel_time) {
   
   access <- lapply(access_paths, readRDS)
   names(access) <- c("Antes", "Depois")
   grid <- setDT(readRDS(grid_path))
+  env <- environment()
   
-  # join accessibility difference datasets to create a faceted chart
+  # join accessibility difference datasets to create a faceted chart and filter
+  # to keep only relevant travel_time
   
   access <- rbindlist(access, idcol = "type")
+  access <- access[travel_time == get("travel_time", envir = env)]
+  
   access[
     grid,
     on = c(fromId = "id_hex"),
@@ -261,7 +266,7 @@ create_dist_maps <- function(city, access_paths, grid_path) {
   
   # generate figures for each of our desired variables
   
-  measures <- c("CMATT60", "CMAET60", "CMASB60")
+  measures <- c("CMATT", "CMAET", "CMASB")
   
   paths <- vapply(
     measures,
@@ -328,7 +333,7 @@ create_dist_maps <- function(city, access_paths, grid_path) {
         plot_height <- 10
       }
       
-      file_path <- file.path(dir_path, paste0(measure, ".png"))
+      file_path <- file.path(dir_path, paste0(measure, travel_time, ".png"))
       ggsave(
         file_path,
         plot,
@@ -349,7 +354,7 @@ create_dist_maps <- function(city, access_paths, grid_path) {
 # access_diff_abs <- tar_read(transit_access_diff_abs)[1]
 # access_diff_rel <- tar_read(transit_access_diff_rel)[1]
 # grid_path <- tar_read(grid_path)[1]
-# measure <- "CMATT60"
+# measure <- "CMATT"
 create_diff_maps <- function(city,
                              access_diff_abs,
                              access_diff_rel,
@@ -433,7 +438,7 @@ create_diff_maps <- function(city,
   
   # generate figures depending on the variable
   
-  measures <- c("CMATT60", "CMAET60", "CMASB60")
+  measures <- c("CMATT", "CMAET", "CMASB")
   
   paths <- vapply(
     measures,
@@ -677,7 +682,7 @@ analyse_scenarios <- function(city,
 # access_diff_abs_path <- tar_read(full_access_diff_abs)
 # access_diff_rel_path <- tar_read(full_access_diff_rel)
 # grid_path <- tar_read(grid_path)[1]
-# measure <- "CMATT60"
+# measure <- "CMATT"
 plot_summary <- function(city,
                          access_paths,
                          access_diff_abs_path,
@@ -752,7 +757,7 @@ plot_summary <- function(city,
   
   # three different plots
   
-  measures <- c("CMATT60", "CMAET60", "CMASB60")
+  measures <- c("CMATT", "CMAET", "CMASB")
   
   vapply(
     measures,
@@ -907,12 +912,12 @@ plot_summary <- function(city,
         # boxplot
         
         ceiling <- fcase(
-          measure == "CMATT60" && method == "abs", 100000,
-          measure == "CMAET60" && method == "abs", 80,
-          measure == "CMASB60" && method == "abs", 30,
-          measure == "CMATT60" && method == "rel", 0.7,
-          measure == "CMAET60" && method == "rel", 0.5,
-          measure == "CMASB60" && method == "rel", 0.6
+          measure == "CMATT" && method == "abs", 100000,
+          measure == "CMAET" && method == "abs", 80,
+          measure == "CMASB" && method == "abs", 30,
+          measure == "CMATT" && method == "rel", 0.7,
+          measure == "CMAET" && method == "rel", 0.5,
+          measure == "CMASB" && method == "rel", 0.6
         )
         label <- ifelse(method == "abs", scales::number, scales::percent)
         

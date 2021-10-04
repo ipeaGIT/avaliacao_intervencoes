@@ -37,6 +37,10 @@ list(
     "rmarkdown/exploratory_skeleton.Rmd"
   ),
   tar_target(
+    tt_thresholds,
+    c(15, 30, 45, 60)
+  ),
+  tar_target(
     exploratory_skeleton,
     exploratory_skeleton_file,
     pattern = map(exploratory_skeleton_file),
@@ -98,7 +102,7 @@ list(
   ),
   tar_target(
     transit_access,
-    create_accesibility_data(
+    create_accessibility_data(
       both_cities,
       before_after,
       transit_matrix,
@@ -125,7 +129,7 @@ list(
             }
           ),
           tidyr::crossing(city = both_cities, scenario = before_after)
-        ),       
+        ),
         city
       )
     ),
@@ -156,9 +160,10 @@ list(
     create_dist_maps(
       access_metadata$city[1],
       access_metadata$access_file,
-      grid_path
+      grid_path,
+      tt_thresholds
     ),
-    pattern = map(access_metadata, grid_path),
+    pattern = cross(map(access_metadata, grid_path), tt_thresholds),
     format = "file"
   ),
   tar_target(
@@ -228,7 +233,7 @@ list(
   ),
   tar_target(
     full_access,
-    calculate_accessibility(
+    create_accessibility_data(
       only_for,
       before_after,
       full_matrix,
