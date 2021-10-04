@@ -270,7 +270,7 @@ calculate_access_diff <- function(city,
     
   }
   
-  cols_to_keep <- c("fromId", access_cols)
+  cols_to_keep <- c("fromId", "travel_time", access_cols)
   access_diff <- access_diff[, ..cols_to_keep]
   
   # save object and return path

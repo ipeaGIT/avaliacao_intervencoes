@@ -47,16 +47,6 @@ list(
     format = "file"
   ),
   tar_target(
-    analysis_skeleton_file,
-    "rmarkdown/scenario_analysis.Rmd"
-  ),
-  tar_target(
-    analysis_skeleton,
-    analysis_skeleton_file,
-    pattern = map(analysis_skeleton_file),
-    format = "file"
-  ),
-  tar_target(
     bike_parks_path,
     paste0(
       "../../data/avaliacao_intervencoes/r5/points/bike_parks_",
@@ -172,10 +162,14 @@ list(
       both_cities, 
       transit_access_diff_abs,
       transit_access_diff_rel,
-      grid_path
+      grid_path,
+      tt_thresholds
     ),
-    pattern = map(
-      both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
+    pattern = cross(
+      map(
+        both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
+      ),
+      tt_thresholds
     ),
     format = "file"
   ),
@@ -185,10 +179,14 @@ list(
       both_cities, 
       transit_access_diff_abs,
       transit_access_diff_rel,
-      grid_path
+      grid_path,
+      tt_thresholds
     ),
-    pattern = map(
-      both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
+    pattern = cross(
+      map(
+        both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
+      ),
+      tt_thresholds
     ),
     format = "file"
   ),
@@ -283,27 +281,16 @@ list(
     format = "file"
   ),
   tar_target(
-    scenario_analysis,
-    analyse_scenarios(
-      only_for,
-      full_access,
-      full_access_diff_abs,
-      grid_path,
-      analysis_skeleton
-    ),
-    pattern = head(grid_path, 1),
-    format = "file"
-  ),
-  tar_target(
     all_modes_summary,
     plot_summary(
       only_for,
       full_access,
       full_access_diff_abs,
       full_access_diff_rel,
-      grid_path
+      grid_path,
+      tt_thresholds
     ),
-    pattern = head(grid_path, 1),
+    pattern = cross(head(grid_path, 1), tt_thresholds),
     format = "file"
   )
 )

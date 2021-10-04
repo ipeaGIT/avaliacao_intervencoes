@@ -3,11 +3,17 @@
 # access_diff_rel <- tar_read(transit_access_diff_rel)[2]
 # grid_path <- tar_read(grid_path)[2]
 # measure <- "CMAET"
-create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
+# travel_time <- 60
+create_boxplots <- function(city,
+                            access_diff_abs,
+                            access_diff_rel,
+                            grid_path,
+                            travel_time) {
   
   access_diff_abs <- readRDS(access_diff_abs)
   access_diff_rel <- readRDS(access_diff_rel)
   grid <- setDT(readRDS(grid_path))
+  env <- environment()
   
   access_diff <- rbind(
     abs = access_diff_abs,
@@ -15,6 +21,7 @@ create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
     idcol = "type",
     fill = TRUE
   )
+  access_diff <- access_diff[travel_time == get("travel_time", envir = env)]
   access_diff[
     grid,
     on = c(fromId = "id_hex"),
@@ -140,11 +147,11 @@ create_boxplots <- function(city, access_diff_abs, access_diff_rel, grid_path) {
       dir_path <- file.path(dir_path, "boxplot_difference")
       if (!dir.exists(dir_path)) dir.create(dir_path)
       
-      # ggsave() raises a warning in the CMAET60 case related to the non
+      # ggsave() raises a warning in the CMAET case related to the non
       # uniqueness of the quantile regression solution. nothing to really worry
       # about
       
-      file_path <- file.path(dir_path, paste0(measure, ".png"))
+      file_path <- file.path(dir_path, paste0(measure, travel_time, ".png"))
       ggsave(
         file_path,
         plot,
@@ -355,14 +362,17 @@ create_dist_maps <- function(city, access_paths, grid_path, travel_time) {
 # access_diff_rel <- tar_read(transit_access_diff_rel)[1]
 # grid_path <- tar_read(grid_path)[1]
 # measure <- "CMATT"
+# travel_time <- 60
 create_diff_maps <- function(city,
                              access_diff_abs,
                              access_diff_rel,
-                             grid_path) {
+                             grid_path,
+                             travel_time) {
   
   access_diff_abs <- readRDS(access_diff_abs)
   access_diff_rel <- readRDS(access_diff_rel)
   grid <- setDT(readRDS(grid_path))
+  env <- environment()
   
   access_diff <- rbind(
     abs = access_diff_abs,
@@ -370,6 +380,7 @@ create_diff_maps <- function(city,
     idcol = "type",
     fill = TRUE
   )
+  access_diff <- access_diff[travel_time == get("travel_time", envir = env)]
   access_diff[
     grid,
     on = c(fromId = "id_hex"),
@@ -577,7 +588,7 @@ create_diff_maps <- function(city,
         plot_height <- 10
       }
       
-      file_path <- file.path(dir_path, paste0(measure, ".png"))
+      file_path <- file.path(dir_path, paste0(measure, travel_time, ".png"))
       ggsave(
         file_path,
         plot,
@@ -596,117 +607,41 @@ create_diff_maps <- function(city,
 
 # city <- tar_read(only_for)
 # access_paths <- tar_read(full_access)
-# access_diff_path <- tar_read(full_access_diff_abs)
-# grid_path <- tar_read(grid_path)[1]
-# analysis_skeleton <- tar_read(analysis_skeleton)
-# type <- "CMATT60"
-analyse_scenarios <- function(city,
-                              access_paths,
-                              access_diff_path,
-                              grid_path,
-                              analysis_skeleton) {
-  
-  access <- lapply(access_paths, readRDS)
-  access_diff <- readRDS(access_diff_path)
-  grid <- setDT(readRDS(grid_path))
-  
-  names(access) <- c("antes", "depois")
-  access <- rbindlist(access, idcol = "scenario")
-  
-  # create three different reports, one for job accessibility, the other for
-  # education accessibility and the last for health accessibility
-  
-  report_dir <- "../../data/avaliacao_intervencoes/for/reports"
-  if (!dir.exists(report_dir)) dir.create(report_dir)
-  
-  vapply(
-    c("CMATT60", "CMAET60", "CMASB60"),
-    FUN.VALUE = character(1),
-    FUN = function(type) {
-      
-      filename <- normalizePath(
-        file.path(report_dir, paste0("scenario_analysis_", type, ".html"))
-      )
-      
-      # don't pass the whole accessibility dataset to the report, only relevant
-      # columns
-      
-      relevant_cols <- c(
-        "scenario",
-        "fromId",
-        paste0(
-          c(
-            "all_modes_",
-            "transit_bike_",
-            "only_transit_",
-            "only_bike_",
-            "only_bfm_"
-          ),
-          type
-        )
-      )
-      relevant_cols_diff <- setdiff(relevant_cols, "scenario")
-      
-      smaller_access <- access[, ..relevant_cols]
-      smaller_access <- setnames(
-        smaller_access,
-        c("scenario", "id", "all_modes", "transit_bike", "only_transit", "only_bike", "only_bfm")
-      )
-      
-      smaller_access_diff <- access_diff[, ..relevant_cols_diff]
-      smaller_access_diff <- setnames(
-        smaller_access_diff,
-        c("id", "all_modes", "transit_bike", "only_transit", "only_bike", "only_bfm")
-      )
-      
-      rmarkdown::render(
-        analysis_skeleton,
-        output_file = filename,
-        params = list(
-          access = smaller_access,
-          access_diff = smaller_access_diff,
-          grid = grid,
-          type = type
-        ),
-        quiet = TRUE
-      )
-      
-    }
-  )
-  
-}
-
-
-# city <- tar_read(only_for)
-# access_paths <- tar_read(full_access)
 # access_diff_abs_path <- tar_read(full_access_diff_abs)
 # access_diff_rel_path <- tar_read(full_access_diff_rel)
 # grid_path <- tar_read(grid_path)[1]
 # measure <- "CMATT"
+# travel_time <- 60
 plot_summary <- function(city,
                          access_paths,
                          access_diff_abs_path,
                          access_diff_rel_path,
-                         grid_path) {
+                         grid_path,
+                         travel_time) {
   
   access <- lapply(access_paths, readRDS)
   access_diff_abs <- readRDS(access_diff_abs_path)
   access_diff_rel <- readRDS(access_diff_rel_path)
   grid <- setDT(readRDS(grid_path))
+  env <- environment()
   
   names(access) <- c("Antes", "Depois")
   access <- rbindlist(access, idcol = "scenario")
+  access <- access[travel_time == get("travel_time", envir = env)]
   access[
     grid,
     on = c(fromId = "id_hex"),
     `:=`(geometry = i.geometry, decil = i.decil)
   ]
   
+  access_diff_abs <- access_diff_abs[travel_time == get("travel_time", envir = env)]
   access_diff_abs[
     grid,
     on = c(fromId = "id_hex"),
     `:=`(geometry = i.geometry, decil = i.decil, pop = i.pop_total)
   ]
+  
+  access_diff_rel <- access_diff_rel[travel_time == get("travel_time", envir = env)]
   access_diff_rel[
     grid,
     on = c(fromId = "id_hex"),
@@ -996,7 +931,7 @@ plot_summary <- function(city,
       dir_path <- file.path(dir_path, "summary_bfm_bike_transit")
       if (!dir.exists(dir_path)) dir.create(dir_path)
       
-      file_path <- file.path(dir_path, paste0(measure, ".png"))
+      file_path <- file.path(dir_path, paste0(measure, travel_time, ".png"))
       ggsave(
         file_path,
         final_plot,
