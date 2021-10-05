@@ -29,8 +29,8 @@ list(
     c("for", "goi")
   ),
   tar_target(
-    before_after,
-    c("antes", "depois")
+    scenarios,
+    c("antes", "depois", "contrafactual")
   ),
   tar_target(
     exploratory_skeleton_file,
@@ -50,10 +50,10 @@ list(
     bike_parks_path,
     paste0(
       "../../data/avaliacao_intervencoes/r5/points/bike_parks_",
-      only_for, "_", before_after,
+      only_for, "_", scenarios,
       ".csv"
     ),
-    pattern = cross(only_for, before_after),
+    pattern = cross(only_for, scenarios),
     format = "file"
   ),
   tar_target(
@@ -76,32 +76,32 @@ list(
     graph,
     paste0(
       "../../data/avaliacao_intervencoes/r5/graph/",
-      both_cities, "_", before_after
+      both_cities, "_", scenarios
     ),
     format = "file",
-    pattern = cross(both_cities, before_after)
+    pattern = cross(both_cities, scenarios)
   ),
   tar_target(
     transit_matrix,
-    transit_ttm(both_cities, before_after, graph, points_path),
+    transit_ttm(both_cities, scenarios, graph, points_path),
     format = "file",
     pattern = map(
       graph,
-      cross(map(both_cities, points_path), before_after)
+      cross(map(both_cities, points_path), scenarios)
     )
   ),
   tar_target(
     transit_access,
     create_accessibility_data(
       both_cities,
-      before_after,
+      scenarios,
       transit_matrix,
       grid_path
     ),
     format = "file",
     pattern = map(
       transit_matrix,
-      cross(map(both_cities, grid_path), before_after)
+      cross(map(both_cities, grid_path), scenarios)
     )
   ),
   tar_target(
@@ -118,7 +118,7 @@ list(
               digest::digest(df, algo = "md5")
             }
           ),
-          tidyr::crossing(city = both_cities, scenario = before_after)
+          tidyr::crossing(city = both_cities, scenario = scenarios)
         ),
         city
       )
@@ -192,19 +192,19 @@ list(
   ),
   tar_target(
     bike_matrix,
-    bike_ttm(only_for, before_after, graph, points_path),
+    bike_ttm(only_for, scenarios, graph, points_path),
     pattern = cross(
       map(only_for, head(points_path, 1)),
-      map(before_after, head(graph, 2))
+      map(scenarios, head(graph, 3))
     ),
     format = "file"
   ),
   tar_target(
     bike_first_mile_matrix,
-    bfm_ttm(only_for, before_after, graph, points_path, bike_parks_path),
+    bfm_ttm(only_for, scenarios, graph, points_path, bike_parks_path),
     pattern = cross(
       map(only_for, head(points_path, 1)),
-      map(before_after, head(graph, 2), bike_parks_path)
+      map(scenarios, head(graph, 3), bike_parks_path)
     ),
     format = "file"
   ),
@@ -212,7 +212,7 @@ list(
     full_matrix,
     join_ttms(
       only_for,
-      before_after,
+      scenarios,
       bike_matrix,
       transit_matrix,
       bike_first_mile_matrix,
@@ -221,9 +221,9 @@ list(
     pattern = cross(
       map(only_for, head(points_path, 1)),
       map(
-        before_after,
+        scenarios,
         bike_matrix,
-        head(transit_matrix, 2),
+        head(transit_matrix, 3),
         bike_first_mile_matrix
       )
     ),
@@ -233,13 +233,13 @@ list(
     full_access,
     create_accessibility_data(
       only_for,
-      before_after,
+      scenarios,
       full_matrix,
       grid_path
     ),
     pattern = map(
       full_matrix,
-      cross(map(only_for, head(grid_path, 1)), before_after)
+      cross(map(only_for, head(grid_path, 1)), scenarios)
     ),
     format = "file"
   ),
@@ -248,7 +248,7 @@ list(
     exploratory_report(
       only_for,
       full_matrix,
-      before_after,
+      scenarios,
       bike_parks_path,
       grid_path,
       exploratory_skeleton
@@ -257,7 +257,7 @@ list(
       full_matrix,
       cross(
         map(only_for, head(grid_path, 1), exploratory_skeleton),
-        map(before_after, bike_parks_path)
+        map(scenarios, bike_parks_path)
       )
     ),
     format = "file"
