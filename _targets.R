@@ -30,7 +30,7 @@ list(
   ),
   tar_target(
     scenarios,
-    c("antes", "depois", "contrafactual")
+    c("antes", "contrafactual", "depois")
   ),
   tar_target(
     exploratory_skeleton_file,
@@ -126,70 +126,60 @@ list(
     iteration = "group"
   ),
   tar_target(
-    transit_access_diff_abs,
+    transit_access_diff,
     calculate_access_diff(
       access_metadata$city[1],
       access_metadata$access_file,
-      method = "absolute"
+      access_metadata$scenario
     ),
     pattern = map(access_metadata),
     format = "file"
   ),
-  tar_target(
-    transit_access_diff_rel,
-    calculate_access_diff(
-      access_metadata$city[1],
-      access_metadata$access_file,
-      method = "relative"
-    ),
-    pattern = map(access_metadata),
-    format = "file"
-  ),
-  tar_target(
-    distribution_maps,
-    create_dist_maps(
-      access_metadata$city[1],
-      access_metadata$access_file,
-      grid_path,
-      tt_thresholds
-    ),
-    pattern = cross(map(access_metadata, grid_path), tt_thresholds),
-    format = "file"
-  ),
-  tar_target(
-    difference_maps,
-    create_diff_maps(
-      both_cities, 
-      transit_access_diff_abs,
-      transit_access_diff_rel,
-      grid_path,
-      tt_thresholds
-    ),
-    pattern = cross(
-      map(
-        both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
-      ),
-      tt_thresholds
-    ),
-    format = "file"
-  ),
-  tar_target(
-    difference_boxplot,
-    create_boxplots(
-      both_cities, 
-      transit_access_diff_abs,
-      transit_access_diff_rel,
-      grid_path,
-      tt_thresholds
-    ),
-    pattern = cross(
-      map(
-        both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
-      ),
-      tt_thresholds
-    ),
-    format = "file"
-  ),
+  # tar_target(
+  #   distribution_maps,
+  #   create_dist_maps(
+  #     access_metadata$city[1],
+  #     access_metadata$access_file,
+  #     grid_path,
+  #     tt_thresholds
+  #   ),
+  #   pattern = cross(map(access_metadata, grid_path), tt_thresholds),
+  #   format = "file"
+  # ),
+  # tar_target(
+  #   difference_maps,
+  #   create_diff_maps(
+  #     both_cities, 
+  #     transit_access_diff_abs,
+  #     transit_access_diff_rel,
+  #     grid_path,
+  #     tt_thresholds
+  #   ),
+  #   pattern = cross(
+  #     map(
+  #       both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
+  #     ),
+  #     tt_thresholds
+  #   ),
+  #   format = "file"
+  # ),
+  # tar_target(
+  #   difference_boxplot,
+  #   create_boxplots(
+  #     both_cities, 
+  #     transit_access_diff_abs,
+  #     transit_access_diff_rel,
+  #     grid_path,
+  #     tt_thresholds
+  #   ),
+  #   pattern = cross(
+  #     map(
+  #       both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
+  #     ),
+  #     tt_thresholds
+  #   ),
+  #   format = "file"
+  # ),
   tar_target(
     bike_matrix,
     bike_ttm(only_for, scenarios, graph, points_path),
@@ -263,34 +253,26 @@ list(
     format = "file"
   ),
   tar_target(
-    full_access_diff_abs,
+    full_access_diff,
     calculate_access_diff(
       only_for,
       full_access,
-      method = "absolute"
+      scenarios
     ),
-    format = "file"
-  ),
-  tar_target(
-    full_access_diff_rel,
-    calculate_access_diff(
-      only_for,
-      full_access,
-      method = "relative"
-    ),
-    format = "file"
-  ),
-  tar_target(
-    all_modes_summary,
-    plot_summary(
-      only_for,
-      full_access,
-      full_access_diff_abs,
-      full_access_diff_rel,
-      grid_path,
-      tt_thresholds
-    ),
-    pattern = cross(head(grid_path, 1), tt_thresholds),
     format = "file"
   )
+  # ,
+  # tar_target(
+  #   all_modes_summary,
+  #   plot_summary(
+  #     only_for,
+  #     full_access,
+  #     full_access_diff_abs,
+  #     full_access_diff_rel,
+  #     grid_path,
+  #     tt_thresholds
+  #   ),
+  #   pattern = cross(head(grid_path, 1), tt_thresholds),
+  #   format = "file"
+  # )
 )

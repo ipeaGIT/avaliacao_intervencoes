@@ -165,113 +165,118 @@ calculate_accessibility <- function(threshold, ttm, opportunities) {
 
 
 # city <- "for"
-# access_paths <- tar_read(access_metadata)$access_file[1:2]
-# method <- "relative"
+# access_paths <- tar_read(access_metadata)$access_file[1:3]
+# scenario <- tar_read(access_metadata)$scenario[1:3]
+# after <- "contrafactual"
 calculate_access_diff <- function(city,
                                   access_paths,
-                                  method = c("absolute", "relative")) {
+                                  scenario) {
   
-  method <- method[1]
   access <- lapply(access_paths, readRDS)
+  names(access) <- scenario
   
   # retrieve the name of the columns with accessibility data to calculate diff
-  # between the two datasets programatically
-  # if method == "relative" then substitute NaN to 0s (they shouldn't matter
-  # much because there are very few places with 0 accessibility and they all
-  # have 0 accessibility in both scenarios)
+  # between the datasets programatically
   
-  access_cols <- setdiff(names(access[[1]]), c("fromId", "travel_time"))
-  setnames(access[[1]], old = access_cols, new = paste0(access_cols, "_antes"))
-  setnames(access[[2]], old = access_cols, new = paste0(access_cols, "_depois"))
+  access_cols <- setdiff(names(access[["depois"]]), c("fromId", "travel_time"))
+  setnames(
+    access[["antes"]],
+    old = access_cols,
+    new = paste0(access_cols, "_antes")
+  )
   
-  access_diff <- access[[1]][access[[2]], on = c("fromId", "travel_time")]
+  # calculate the difference between the 'contrafactual' and 'depois' scenarios
+  # to the 'antes' scenario
   
-  if (method == "absolute") {
-    
-    diff_expression <- paste0(
-      "`:=`(",
-      paste(
-        access_cols,
-        "=",
-        paste0(access_cols, "_depois"),
-        "-",
-        paste0(access_cols, "_antes"),
-        collapse = ", "
-      ),
-      ")"
-    )
-    
-    access_diff[, eval(parse(text = diff_expression))]
-    
-  } else if (method == "relative") {
-    
-    diff_expression <- paste0(
-      "`:=`(",
-      paste(
-        access_cols,
-        "= (",
-        paste0(access_cols, "_depois"),
-        "-",
-        paste0(access_cols, "_antes"),
-        ") /",
-        paste0(access_cols, "_antes"),
-        collapse = ", "
-      ),
-      ")"
-    )
-    
-    diff_expression_log <- paste0(
-      "`:=`(",
-      paste(
-        paste0(access_cols, "_log"),
-        "= log(",
-        paste0(access_cols, "_depois"),
-        "/",
-        paste0(access_cols, "_antes"),
-        ")",
-        collapse = ", "
-      ),
-      ")"
-    )
-    
-    access_diff[, eval(parse(text = diff_expression))]
-    access_diff[, eval(parse(text = diff_expression_log))]
-    
-    access_cols <- c(access_cols, paste0(access_cols, "_log"))
-    
-    for (col in access_cols) {
-      data.table::set(
-        access_diff,
-        i = which(is.nan(access_diff[[col]])),
-        j = col,
-        value = 0
+  after_scenarios <- c(contrafactual = "contrafactual", depois = "depois")
+  
+  access_diff <- lapply(
+    after_scenarios,
+    function(after) {
+      
+      diff_dt <- access[["antes"]][
+        access[[after]],
+        on = c("fromId", "travel_time")
+      ]
+      
+      # absolute difference: after - before
+      
+      abs_expression <- paste0(
+        "`:=`(",
+        paste(
+          paste0(access_cols, "_abs"),
+          "=",
+          access_cols,
+          "-",
+          paste0(access_cols, "_antes"),
+          collapse = ", "
+        ),
+        ")"
       )
+      diff_dt[, eval(parse(text = abs_expression))]
       
-      # calculating log difference may introduce some Inf and -Inf
-      # substitute them with the man and min finite numbers
+      # relative difference: (after - before) / before
+      # substitute NaN to 0s (they shouldn't matter much because there are very
+      # few places with 0 accessibility and they all have 0 accessibility in
+      # both scenarios)
+      # substitute Inf to the max finite value
       
-      max_finite <- max(access_diff[[col]][is.finite(access_diff[[col]])])
-      min_finite <- min(access_diff[[col]][is.finite(access_diff[[col]])])
-      
-      data.table::set(
-        access_diff,
-        i = which(is.infinite(access_diff[[col]]) & access_diff[[col]] > 0),
-        j = col,
-        value = max_finite
+      rel_expression <- paste0(
+        "`:=`(",
+        paste(
+          paste0(access_cols, "_rel"),
+          "= (",
+          access_cols,
+          "-",
+          paste0(access_cols, "_antes"),
+          ") /",
+          paste0(access_cols, "_antes"),
+          collapse = ", "
+        ),
+        ")"
       )
+      diff_dt[, eval(parse(text = rel_expression))]
       
-      data.table::set(
-        access_diff,
-        i = which(is.infinite(access_diff[[col]]) & access_diff[[col]] < 0),
-        j = col,
-        value = min_finite
+      for (col in paste0(access_cols, "_rel")) {
+        data.table::set(
+          diff_dt,
+          i = which(is.nan(diff_dt[[col]])),
+          j = col,
+          value = 0
+        )
+        
+        max_finite <- max(diff_dt[[col]][is.finite(diff_dt[[col]])])
+        data.table::set(
+          diff_dt,
+          i = which(is.infinite(diff_dt[[col]]) & diff_dt[[col]] > 0),
+          j = col,
+          value = max_finite
+        )
+      }
+      
+      # melt 'diff_dt' so we have the type of difference in a column
+      # remove non-difference columns before melting
+      
+      cols_to_keep <- setdiff(
+        names(diff_dt),
+        c(access_cols, paste0(access_cols, "_antes"))
       )
+      diff_dt <- diff_dt[, ..cols_to_keep]
+      
+      diff_dt <- melt(
+        diff_dt,
+        id.vars = c("travel_time", "fromId"),
+        measure.vars = patterns(access_cols),
+        variable.name = "type",
+        value.name = access_cols
+      )
+      diff_dt[, type := fifelse(type == 1, "abs", "rel")]
+      
+      return(diff_dt)
+      
     }
-    
-  }
-  
-  cols_to_keep <- c("fromId", "travel_time", access_cols)
-  access_diff <- access_diff[, ..cols_to_keep]
+  )
+  access_diff <- rbindlist(access_diff, idcol = "scenario")
   
   # save object and return path
   
@@ -282,8 +287,8 @@ calculate_access_diff <- function(city,
   
   file_path <- ifelse(
     any(grepl("only_bfm", names(access_diff))),
-    file.path(dir_path, paste0("full_access_diff_", method, ".rds")),
-    file.path(dir_path, paste0("transit_access_diff_", method, ".rds"))
+    file.path(dir_path, paste0("full_access_diff.rds")),
+    file.path(dir_path, paste0("transit_access_diff.rds"))
   )
   saveRDS(access_diff, file_path)
   
