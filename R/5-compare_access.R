@@ -241,6 +241,24 @@ create_dist_maps <- function(city, access_paths, grid_path, travel_time) {
       !(trip_id == "LL-0.1-1" & origin_file == "stop_times")
     ]
     
+    # the 'before' scenario must not include the new subway line.
+    # bind 'transit_shapes' into itself and add column to make sure the lines
+    # are adequately faceted
+    
+    n_trips <- length(unique(transit_shapes$trip_id))
+    
+    transit_shapes <- rbind(
+      transit_shapes,
+      transit_shapes[origin_file != "shapes"]
+    )
+    transit_shapes[
+      ,
+      type := c(
+        rep("Depois", n_trips),
+        rep("Antes", n_trips - 1)
+      )
+    ]
+    
   } else if (city == "goi") {
     
     gtfs <- gtfstools::read_gtfs(
@@ -679,6 +697,24 @@ plot_summary <- function(city,
   )
   transit_shapes <- setDT(transit_shapes)[
     !(trip_id == "LL-0.1-1" & origin_file == "stop_times")
+  ]
+  
+  # the 'before' scenario must not include the new subway line.
+  # bind 'transit_shapes' into itself and add column to make sure the lines
+  # are adequately faceted
+  
+  n_trips <- length(unique(transit_shapes$trip_id))
+  
+  transit_shapes <- rbind(
+    transit_shapes,
+    transit_shapes[origin_file != "shapes"]
+  )
+  transit_shapes[
+    ,
+    scenario := c(
+      rep("Depois", n_trips),
+      rep("Antes", n_trips - 1)
+    )
   ]
   
   # transform sf objects' crs to 3857 so they became "compatible" with the
