@@ -398,45 +398,34 @@ create_dist_maps <- function(city,
 
 
 # city <- "for"
-# access_diff_abs <- tar_read(transit_access_diff_abs)[1]
-# access_diff_rel <- tar_read(transit_access_diff_rel)[1]
+# access_diff_path <- tar_read(transit_access_diff)[1]
 # grid_path <- tar_read(grid_path)[1]
 # measure <- "CMATT"
 # travel_time <- 60
 create_diff_maps <- function(city,
-                             access_diff_abs,
-                             access_diff_rel,
+                             access_diff_path,
                              grid_path,
                              travel_time) {
   
-  access_diff_abs <- readRDS(access_diff_abs)
-  access_diff_rel <- readRDS(access_diff_rel)
+  access_diff <- readRDS(access_diff_path)
   grid <- setDT(readRDS(grid_path))
   env <- environment()
   
-  access_diff <- rbind(
-    abs = access_diff_abs,
-    rel = access_diff_rel,
-    idcol = "type",
-    fill = TRUE
-  )
+  access_diff <- access_diff[type == "abs"]
   access_diff <- access_diff[travel_time == get("travel_time", envir = env)]
+  access_diff[
+    ,
+    scenario := factor(
+      scenario,
+      levels = c("depois", "contrafactual"),
+      labels = c("Depois", "Contrafactual")
+    )
+  ]
   access_diff[
     grid,
     on = c(fromId = "id_hex"),
     `:=`(geometry = i.geometry, decil = i.decil)
   ]
-  
-  # download basemap and city and transit routes shapes, depending on the city
-  # using 2018 data to generate the basemap of goiania city only, not MR 
-  
-  basemap <- readRDS(
-    paste0(
-      "../../data/acesso_oport/maptiles_crop/2018/mapbox/maptile_crop_mapbox_",
-      city,
-      "_2018.rds"
-    )
-  )
   
   city_code <- ifelse(city == "for", 2304400, 5208707)
   city_shape <- geobr::read_municipality(city_code)
@@ -527,10 +516,8 @@ create_diff_maps <- function(city,
       )
       lim_abs <- c(-1, 1) * max_diff_abs
 
-      lim_rel <- c(-0.5, 1)
-      
-      # transform sf objects' crs to 3857 so they became "compatible" with the
-      # basemap raster
+      # TODO: remove this unnecessary transformations
+      # TODO: truncate diff values
       
       access_diff <- setDT(st_transform(st_sf(access_diff), 3857))
       transit_shapes <- st_transform(st_sf(transit_shapes), 3857)
@@ -538,16 +525,13 @@ create_diff_maps <- function(city,
       
       # absolute difference
       
-      abs_plot <- ggplot() +
-        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        # coord_equal() +
-        # scale_fill_identity() +
-        # ggnewscale::new_scale_fill() +
+      plot <- ggplot() +
         geom_sf(
           data = st_sf(access_diff[type == "abs", ]),
           aes(fill = get(relevant_var)),
           color = NA
         ) +
+        facet_wrap(~ scenario) +
         geom_sf(
           data = st_sf(transit_shapes),
           size = 0.5,
@@ -565,52 +549,7 @@ create_diff_maps <- function(city,
         labs(subtitle = "Absoluta") +
         diff_map_theme
       
-      # relative difference - first treat the variable. if greater than 100% or
-      # smaller than -50%, truncate the values
-      
-      access_diff[
-        type == "rel" & get(relevant_var) > 1,
-        eval(relevant_var_treated) := 1
-      ]
-      access_diff[
-        type == "rel" & get(relevant_var) < -0.5,
-        eval(relevant_var_treated) := -0.5
-      ]
-      access_diff[
-        type == "rel" & get(relevant_var) >= -0.5 & get(relevant_var) <= 1,
-        eval(relevant_var_treated) := get(relevant_var)
-      ]
-      
-      rel_plot <- ggplot() +
-        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        # coord_equal() +
-        # scale_fill_identity() +
-        # ggnewscale::new_scale_fill() +
-        geom_sf(
-          data = st_sf(access_diff[type == "rel", ]),
-          aes(fill = get(relevant_var_treated)),
-          color = NA
-        ) +
-        geom_sf(
-          data = transit_shapes,
-          size = 0.5,
-          alpha = 0.7
-        ) +
-        geom_sf(data = city_shape, fill = NA) +
-        scale_fill_distiller(
-          name = "Diferenca de\nacessibilidade",
-          palette = "RdBu",
-          values = scales::rescale(c(-0.5, 0, 1)),
-          limits = lim_rel,
-          direction = 1,
-          labels = c("<50%", "0%", "50%", ">100%")
-        ) +
-        labs(subtitle = "Relativa") +
-        diff_map_theme
-      
-      # join them using patchwork, save the result and return the path
-      
-      plot <- abs_plot | rel_plot
+      # save the result and return the path
       
       dir_path <- file.path(
         "../../data/avaliacao_intervencoes",

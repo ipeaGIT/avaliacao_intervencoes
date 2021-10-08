@@ -147,23 +147,22 @@ list(
     pattern = cross(map(access_metadata, grid_path), tt_thresholds),
     format = "file"
   ),
-  # tar_target(
-  #   difference_maps,
-  #   create_diff_maps(
-  #     both_cities, 
-  #     transit_access_diff_abs,
-  #     transit_access_diff_rel,
-  #     grid_path,
-  #     tt_thresholds
-  #   ),
-  #   pattern = cross(
-  #     map(
-  #       both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
-  #     ),
-  #     tt_thresholds
-  #   ),
-  #   format = "file"
-  # ),
+  tar_target(
+    difference_maps,
+    create_diff_maps(
+      both_cities,
+      transit_access_diff,
+      grid_path,
+      tt_thresholds
+    ),
+    pattern = cross(
+      map(
+        both_cities, transit_access_diff, grid_path
+      ),
+      tt_thresholds
+    ),
+    format = "file"
+  ),
   # tar_target(
   #   difference_boxplot,
   #   create_boxplots(
