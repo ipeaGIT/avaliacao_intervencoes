@@ -284,7 +284,7 @@ join_ttms <- function(city,
 
 # city <- tar_read(only_for)
 # ttm_path <- tar_read(full_matrix)[1]
-# scenario <- tar_read(before_after)[1]
+# scenario <- tar_read(scenarios)[1]
 # bike_parks_path <- tar_read(bike_parks_path)[1]
 # grid_path <- tar_read(grid_path)[1]
 # exploratory_skeleton <- tar_read(exploratory_skeleton)
@@ -299,9 +299,9 @@ exploratory_report <- function(city,
   bike_parks <- fread(bike_parks_path)
   
   random_points <- data.table(
-    hex_name = c("aldeota", "parangaba", "luciano_cavalcanti", "carlito_pamplona", "ponto_estranho", "ponto_ao_lado", "ponto_abaixo"),
-    lon = c(-38.499719, -38.562038, -38.487955, -38.558178, -38.54842, -38.55137, -38.54847),
-    lat = c(-3.740666, -3.777242, -3.776920, -3.717195, -3.708078, -3.706314, -3.711516)
+    hex_name = c("aldeota", "parangaba", "luciano_cavalcanti", "carlito_pamplona"),#, "ponto_estranho", "ponto_ao_lado", "ponto_abaixo"),
+    lon = c(-38.499719, -38.562038, -38.487955, -38.558178),# -38.54842, -38.55137, -38.54847),
+    lat = c(-3.740666, -3.777242, -3.776920, -3.717195)#, -3.708078, -3.706314, -3.711516)
   )
   random_points <- st_as_sf(random_points, coords = c("lon", "lat"), crs = 4326)
   

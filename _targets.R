@@ -135,17 +135,18 @@ list(
     pattern = map(access_metadata),
     format = "file"
   ),
-  # tar_target(
-  #   distribution_maps,
-  #   create_dist_maps(
-  #     access_metadata$city[1],
-  #     access_metadata$access_file,
-  #     grid_path,
-  #     tt_thresholds
-  #   ),
-  #   pattern = cross(map(access_metadata, grid_path), tt_thresholds),
-  #   format = "file"
-  # ),
+  tar_target(
+    distribution_maps,
+    create_dist_maps(
+      access_metadata$city[1],
+      access_metadata$access_file,
+      access_metadata$scenario,
+      grid_path,
+      tt_thresholds
+    ),
+    pattern = cross(map(access_metadata, grid_path), tt_thresholds),
+    format = "file"
+  ),
   # tar_target(
   #   difference_maps,
   #   create_diff_maps(

@@ -193,16 +193,26 @@ calculate_palma <- function(access, relevant_var) {
 
 
 # city <- "for"
-# access_paths <- tar_read(access_metadata)$access_file[1:2]
+# access_paths <- tar_read(access_metadata)$access_file[1:3]
+# scenario <- tar_read(access_metadata)$scenario[1:3]
 # grid_path <- tar_read(grid_path)[1]
 # measure <- "CMATT"
 # travel_time <- 60
-create_dist_maps <- function(city, access_paths, grid_path, travel_time) {
+create_dist_maps <- function(city,
+                             access_paths,
+                             scenario,
+                             grid_path,
+                             travel_time) {
   
   access <- lapply(access_paths, readRDS)
-  names(access) <- c("Antes", "Depois")
+  names(access) <- scenario
   grid <- setDT(readRDS(grid_path))
   env <- environment()
+  
+  # dont include counterfactual scenario in this plot
+  
+  access$contrafactual <- NULL
+  names(access) <- c("Antes", "Depois")
   
   # join accessibility difference datasets to create a faceted chart and filter
   # to keep only relevant travel_time
