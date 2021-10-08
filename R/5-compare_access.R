@@ -168,14 +168,26 @@ create_boxplots <- function(city,
 }
 
 
-calculate_palma <- function(access_diff, relevant_var) {
+calculate_palma <- function(access, relevant_var) {
   
-  richest_10 <- access_diff[decil == 10]
-  poorest_40 <- access_diff[decil >= 1 & decil <= 4]
+  richest_10 <- access[decil == 10]
+  poorest_40 <- access[decil >= 1 & decil <= 4]
   
-  palma <- weighted.mean(richest_10[[relevant_var]], w = richest_10$pop) /
-    weighted.mean(poorest_40[[relevant_var]], w = poorest_40$pop)
-  palma <- format(palma, digits = 2, nsmall = 2)
+  numerator <- weighted.mean(
+    richest_10[[relevant_var]],
+    w = richest_10$pop,
+    na.rm = TRUE
+  )
+  
+  denominator <- weighted.mean(
+    poorest_40[[relevant_var]],
+    w = poorest_40$pop,
+    na.rm = TRUE
+  )
+  
+  palma <- numerator / denominator
+  
+  return(palma)
   
 }
 
@@ -978,6 +990,98 @@ plot_summary <- function(city,
       
       return(file_path)
       
+    }
+  )
+  
+}
+
+
+# city <- tar_read(both_cities)[1]
+# access_paths <- tar_read(access_metadata)$access_file[1:3]
+# scenarios <- tar_read(access_metadata)$scenario[1:3]
+# grid_path <- tar_read(grid_path)[1]
+# measure <- "CMATT"
+compare_palma <- function(city, access_paths, scenarios, grid_path) {
+  
+  grid <- setDT(readRDS(grid_path))
+  
+  names(access_paths) <- scenarios
+  access <- lapply(access_paths, readRDS)
+  access <- rbindlist(access, idcol = "scenario")
+  access[
+    grid,
+    on = c(fromId = "id_hex"),
+    `:=`(pop = i.pop_total, decil = i.decil)
+  ]
+  access <- access[decil > 0]
+  
+  measures <- c("CMATT", "CMAET", "CMASB")
+  relevant_vars <- paste0("only_transit_", measures)
+  
+  # nest dataframes of accessibility distribution for each scenario and travel
+  # time to calculate the palma ratio of each case
+  
+  access <- access[
+    ,
+    .(dist = list(.SD)),
+    by = .(scenario, travel_time),
+    .SDcols = c(relevant_vars, "pop", "decil")
+  ]
+  
+  # calculate the palma ratio for each relevant_var
+  
+  palma_expr <- paste0(
+    "palma_", measures,
+    "=",
+    "vapply(dist, function(dt) calculate_palma(dt,'", relevant_vars,
+    "'), numeric(1))",
+    collapse = ", "
+  )
+  palma_expr <- paste0("`:=`(", palma_expr, ")")
+  
+  access[, eval(parse(text = palma_expr))]
+  
+  # remove the 'dist' column, otherwise the data.table is kindle clunky
+  
+  access[, dist := NULL]
+  
+  # generate one file for each measure
+  
+  paths <- vapply(
+    measures,
+    FUN.VALUE = character(1),
+    FUN = function(measure) {
+      palma_var <- paste0("palma_", measure)
+      
+      plot_theme <- theme_minimal() +
+        theme(
+          panel.grid.minor = element_blank()
+        )
+      
+      plot <- ggplot(access) +
+        geom_line(aes(travel_time, get(palma_var), color = scenario)) +
+        plot_theme
+      
+      # save and return the result so the target follows the file
+      
+      dir_path <- file.path(
+        "../../data/avaliacao_intervencoes",
+        city,
+        "figures"
+      )
+      if (!dir.exists(dir_path)) dir.create(dir_path)
+      
+      dir_path <- file.path(dir_path, "palma_comparison")
+      if (!dir.exists(dir_path)) dir.create(dir_path)
+      
+      file_path <- file.path(dir_path, paste0(measure, ".png"))
+      ggsave(
+        file_path,
+        plot,
+        width = 16,
+        height = 6,
+        units = "cm"
+      )
     }
   )
   

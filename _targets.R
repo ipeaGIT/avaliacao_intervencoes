@@ -181,6 +181,17 @@ list(
   #   format = "file"
   # ),
   tar_target(
+    palma_comparison,
+    compare_palma(
+      both_cities,
+      access_metadata$access_file,
+      access_metadata$scenario,
+      grid_path
+    ),
+    pattern = map(both_cities, access_metadata, grid_path),
+    format = "file"
+  ),
+  tar_target(
     bike_matrix,
     bike_ttm(only_for, scenarios, graph, points_path),
     pattern = cross(
