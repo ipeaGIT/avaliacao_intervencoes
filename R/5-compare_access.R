@@ -418,7 +418,7 @@ create_diff_maps <- function(city,
     scenario := factor(
       scenario,
       levels = c("depois", "contrafactual"),
-      labels = c("Depois", "Contrafactual")
+      labels = c("Previsto", "Contrafactual")
     )
   ]
   access_diff[
@@ -485,49 +485,42 @@ create_diff_maps <- function(city,
     FUN.VALUE = character(1),
     FUN = function(measure) {
       relevant_var <- paste0("only_transit_", measure)
-      relevant_var_treated <- paste0(relevant_var, "_treated")
       
-      diff_map_theme <- theme_minimal() +
-        theme(
-          legend.position = "bottom",
-          legend.title = element_text(vjust = 1),
-          axis.text = element_blank(),
-          axis.title = element_blank(),
-          panel.grid = element_blank(),
-          plot.subtitle = element_text(hjust = 0.5)
-        )
+      # truncate difference values, based on each measure's value
       
-      label_func <- if (grepl("TT", measure)) {
-        scales::label_number(
-          accuracy = 1,
-          scale = 1/1000,
-          suffix = "k",
-          big.mark = ","
+      max_value <- fcase(
+        measure == "CMATT", 100000,
+        measure == "CMAET", 50,
+        measure == "CMASB", 15
+      )
+      
+      access_diff[
+        ,
+        eval(relevant_var) := fifelse(
+          get(relevant_var) > max_value,
+          max_value,
+          fifelse(
+            get(relevant_var) < -max_value,
+            -max_value,
+            get(relevant_var)
+          )
         )
-      } else {
-        scales::label_number()
-      }
+      ]
       
       # legend-guide related objects
       
-      max_diff_abs <- max(
-        abs(access_diff[type == "abs"][[relevant_var]]),
-        na.rm = TRUE
-      )
-      lim_abs <- c(-1, 1) * max_diff_abs
-
-      # TODO: remove this unnecessary transformations
-      # TODO: truncate diff values
+      breaks <- c(-max_value, 0, max_value)
+      labels <- if (grepl("TT", measure)) {
+        c(paste0("< ", breaks[1]/1000, "k"), 0, paste0("> ", breaks[3]/1000, "k"))
+      } else {
+        c(paste0("< ", breaks[1]), 0, paste0("> ", breaks[3]))
+      }
       
-      access_diff <- setDT(st_transform(st_sf(access_diff), 3857))
-      transit_shapes <- st_transform(st_sf(transit_shapes), 3857)
-      city_shape <- st_transform(city_shape, 3857)
-      
-      # absolute difference
+      # plot settings
       
       plot <- ggplot() +
         geom_sf(
-          data = st_sf(access_diff[type == "abs", ]),
+          data = st_sf(access_diff),
           aes(fill = get(relevant_var)),
           color = NA
         ) +
@@ -539,15 +532,23 @@ create_diff_maps <- function(city,
         ) +
         geom_sf(data = city_shape, fill = NA) +
         scale_fill_distiller(
-          name = "Diferenca de\nacessibilidade",
+          name = "Diferença de\nacessibilidade",
           palette = "RdBu",
-          limits = lim_abs,
           direction = 1,
           n.breaks = 4,
-          labels = label_func
+          limits = c(-max_value, max_value),
+          breaks = breaks,
+          labels = labels
         ) +
-        labs(subtitle = "Absoluta") +
-        diff_map_theme
+        theme_minimal() +
+        theme(
+          legend.position = "bottom",
+          legend.title = element_text(vjust = 1),
+          axis.text = element_blank(),
+          axis.title = element_blank(),
+          panel.grid = element_blank(),
+          strip.text = element_text(size = 11)
+        )
       
       # save the result and return the path
       
