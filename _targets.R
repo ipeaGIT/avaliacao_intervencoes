@@ -163,23 +163,24 @@ list(
     ),
     format = "file"
   ),
-  # tar_target(
-  #   difference_boxplot,
-  #   create_boxplots(
-  #     both_cities, 
-  #     transit_access_diff_abs,
-  #     transit_access_diff_rel,
-  #     grid_path,
-  #     tt_thresholds
-  #   ),
-  #   pattern = cross(
-  #     map(
-  #       both_cities, transit_access_diff_abs, transit_access_diff_rel, grid_path
-  #     ),
-  #     tt_thresholds
-  #   ),
-  #   format = "file"
-  # ),
+  tar_target(
+    difference_boxplot,
+    create_boxplots(
+      both_cities,
+      transit_access_diff,
+      access_metadata$access_file,
+      access_metadata$scenario,
+      grid_path,
+      tt_thresholds
+    ),
+    pattern = cross(
+      map(
+        both_cities, transit_access_diff, access_metadata, grid_path
+      ),
+      tt_thresholds
+    ),
+    format = "file"
+  ),
   tar_target(
     palma_comparison,
     compare_palma(
