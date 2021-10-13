@@ -38,7 +38,7 @@ list(
   ),
   tar_target(
     tt_thresholds,
-    c(15, 30, 45, 60)
+    c(60)
   ),
   tar_target(
     exploratory_skeleton,

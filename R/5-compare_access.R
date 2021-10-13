@@ -122,30 +122,6 @@ create_boxplots <- function(city,
 }
 
 
-calculate_palma <- function(access, relevant_var) {
-  
-  richest_10 <- access[decil == 10]
-  poorest_40 <- access[decil >= 1 & decil <= 4]
-  
-  numerator <- weighted.mean(
-    richest_10[[relevant_var]],
-    w = richest_10$pop,
-    na.rm = TRUE
-  )
-  
-  denominator <- weighted.mean(
-    poorest_40[[relevant_var]],
-    w = poorest_40$pop,
-    na.rm = TRUE
-  )
-  
-  palma <- numerator / denominator
-  
-  return(palma)
-  
-}
-
-
 # city <- "for"
 # access_paths <- tar_read(access_metadata)$access_file[1:3]
 # scenario <- tar_read(access_metadata)$scenario[1:3]
@@ -259,7 +235,7 @@ create_dist_maps <- function(city,
     FUN = function(measure) {
       relevant_var <- paste0("only_transit_", measure)
       
-      label_func <- if (grepl("TT", measure)) {
+      label <- if (grepl("TT", measure)) {
         scales::label_number(
           accuracy = 1,
           scale = 1/1000,
@@ -269,6 +245,13 @@ create_dist_maps <- function(city,
       } else {
         scales::label_number()
       }
+      
+      break_precision <- ifelse(grepl("TT", measure), 50000, 10)
+      max_break <- round_up(
+        max(access[[relevant_var]], na.rm = TRUE), 
+        break_precision
+      )
+      breaks <- seq(0, max_break, length.out = 3)
       
       plot <- ggplot() +
         geom_sf(
@@ -286,8 +269,9 @@ create_dist_maps <- function(city,
         scale_fill_viridis_c(
           name = "Acessibilidade por\ntransporte publico",
           option = "inferno",
-          label = label_func,
-          n.breaks = 4
+          label = label,
+          breaks = breaks,
+          limit = c(0, max_break)
         ) +
         theme_minimal() +
         theme(
@@ -920,5 +904,37 @@ compare_palma <- function(city, access_paths, scenarios, grid_path) {
       )
     }
   )
+  
+}
+
+
+calculate_palma <- function(access, relevant_var) {
+  
+  richest_10 <- access[decil == 10]
+  poorest_40 <- access[decil >= 1 & decil <= 4]
+  
+  numerator <- weighted.mean(
+    richest_10[[relevant_var]],
+    w = richest_10$pop,
+    na.rm = TRUE
+  )
+  
+  denominator <- weighted.mean(
+    poorest_40[[relevant_var]],
+    w = poorest_40$pop,
+    na.rm = TRUE
+  )
+  
+  palma <- numerator / denominator
+  
+  return(palma)
+  
+}
+
+
+round_up <- function(x, precision) {
+  
+  quotient_int <- ceiling(x / precision)
+  return(quotient_int * precision)
   
 }
