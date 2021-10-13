@@ -528,6 +528,7 @@ create_diff_maps <- function(city,
 # grid_path <- tar_read(grid_path)[1]
 # measure <- "CMATT"
 # travel_time <- 60
+# # plot_summary(city, scenarios, access_paths, access_diff_path, grid_path, travel_time)
 plot_summary <- function(city,
                          scenarios,
                          access_paths,
@@ -554,7 +555,15 @@ plot_summary <- function(city,
   access_diff[
     grid,
     on = c(fromId = "id_hex"),
-    `:=`(geometry = i.geometry, decil = i.decil)
+    `:=`(geometry = i.geometry, decil = i.decil, pop = i.pop_total)
+  ]
+  access_diff[
+    ,
+    scenario := factor(
+      scenario,
+      levels = c("depois", "contrafactual"),
+      labels = c("Previsto", "Contrafactual")
+    )
   ]
   
   # download city and transit routes shapes
@@ -629,7 +638,7 @@ plot_summary <- function(city,
         scales::label_number()
       }
       
-      # first row - "normal" accessibility distribution
+      # first row - accessibility distribution
       # dont include counterfactual scenario in this plot
       
       access <- access[scenario != "contrafactual"]
@@ -656,192 +665,142 @@ plot_summary <- function(city,
         geom_sf(data = city_shape, fill = NA) +
         facet_wrap(~ scenario) +
         scale_fill_viridis_c(
-          name = NULL,
+          name = "Acessibilidade",
           option = "inferno",
           label = label_func,
           n.breaks = 4
         ) +
+        labs(y = "Distribuição de\nacessibilidade") +
         theme_minimal() +
-        labs(y = "Acessibilidade") +
         theme(
           axis.text = element_blank(),
           axis.title.x = element_blank(),
           panel.grid = element_blank(),
-          strip.text = element_text(size = 10)
+          strip.text = element_text(size = 11),
+          legend.justification = "left"
         )
       
-      row_one <- cowplot::plot_grid(
-        map_dist, 
-        NULL,
-        nrow = 1,
-        rel_widths = c(1, 0.1)
+      # second row - accessibility differences distribution map
+      # truncate values for each measure
+      # remove 'scenario' column from 'transit_shapes' so it doesnt create extra
+      # facets
+      
+      transit_shapes <- transit_shapes[scenario == "Depois"]
+      transit_shapes$scenario <- NULL
+      
+      max_value <- fcase(
+        measure == "CMATT", 100000,
+        measure == "CMAET", 50,
+        measure == "CMASB", 15
       )
       
-      # function to generate rows with a difference map on the left and a
-      # difference boxplot on the right
+      access_diff[
+        ,
+        truncated_value := fifelse(
+          get(relevant_var) > max_value,
+          max_value,
+          fifelse(
+            get(relevant_var) < -max_value,
+            -max_value,
+            get(relevant_var)
+          )
+        )
+      ]
       
-      # access_diff <- access_diff_rel
-      # method <- "rel"
-      diff_row_generator <- function(access_diff, method) {
-        
-        diff_map_theme <- theme_minimal() +
-          theme(
-            axis.text = element_blank(),
-            axis.title.x = element_blank(),
-            panel.grid = element_blank(),
-            plot.subtitle = element_text(hjust = 0.5),
-            legend.position = "bottom",
-            legend.box.spacing = unit(0, "pt")
-          )
-        
-        boxplot_theme <- theme_minimal() +
-          theme(
-            panel.grid = element_blank(),
-            axis.text.x = element_blank(),
-            plot.subtitle = element_markdown(),
-            legend.position = "bottom",
-            legend.title = element_blank()
-          )
-        
-        # objects that depend on the method
-        
-        relevant_var_treated <- paste0(relevant_var, "_treated")
-        
-        access_diff[
-          get(relevant_var) > 1,
-          eval(relevant_var_treated) := 1
-        ]
-        access_diff[
-          get(relevant_var) < -0.5,
-          eval(relevant_var_treated) := -0.5
-        ]
-        access_diff[
-          get(relevant_var) >= -0.5 & get(relevant_var) <= 1,
-          eval(relevant_var_treated) := get(relevant_var)
-        ]
-        
-        title <- ifelse(method == "abs", "Dif. absoluta", "Dif. relativa")
-        diff_var <- ifelse(method == "abs", relevant_var, relevant_var_treated)
-        
-        map_label <- label_func
-        if (method == "rel") map_label <- c("<50%", "0%", "50%", ">100%")
-        
-        values <- NULL
-        if (method == "rel") values <- scales::rescale(c(-0.5, 0, 1))
-        
-        # map's legend-guide related objects
-        
-        max_diff<- max(
-          abs(access_diff[[diff_var]]),
-          na.rm = TRUE
-        )
-        lim <- c(-1, 1) * max_diff
-        
-        if (method == "rel") lim <- c(-0.5, 1.0)
-        
-        # map
-        
-        map_diff <- ggplot() +
-          # geom_raster(data = basemap, aes(x, y, fill = hex)) +
-          # coord_equal() +
-          # scale_fill_identity() +
-          # ggnewscale::new_scale_fill() +
-          geom_sf(
-            data = st_sf(access_diff),
-            aes(fill = get(diff_var)),
-            color = NA
-          ) +
-          geom_sf(
-            data = transit_shapes,
-            size = 0.5,
-            alpha = 0.7
-          ) +
-          geom_sf(data = city_shape, fill = NA) +
-          scale_fill_distiller(
-            name = NULL,
-            palette = "RdBu",
-            labels = map_label,
-            values = values,
-            n.breaks = 4,
-            direction = 1,
-            limits = lim
-          ) +
-          labs(y = title) +
-          diff_map_theme
-        
-        # boxplot
-        
-        ceiling <- fcase(
-          measure == "CMATT" && method == "abs", 100000,
-          measure == "CMAET" && method == "abs", 80,
-          measure == "CMASB" && method == "abs", 30,
-          measure == "CMATT" && method == "rel", 0.7,
-          measure == "CMAET" && method == "rel", 0.5,
-          measure == "CMASB" && method == "rel", 0.6
-        )
-        label <- ifelse(method == "abs", scales::number, scales::percent)
-        
-        palma <- calculate_palma(access_diff, relevant_var)
-        
-        access_diff <- access_diff[decil > 0, ]
-        
-        boxplot_diff <- ggplot(access_diff) +
-          geom_segment(
-            aes(
-              x = 0.5, y = 0,
-              xend = 10.5, yend = 0
-            ),
-            color = "gray85"
-          ) +
-          geom_boxplot(
-            aes(
-              as.factor(decil),
-              get(relevant_var),
-              weight = pop,
-              color = as.factor(decil)
-            ),
-            outlier.size = 1.5,
-            outlier.alpha = 0.5,
-            show.legend = TRUE
-          ) +
-          scale_colour_brewer(palette = "BrBG") +
-          scale_y_continuous(labels = label) +
-          scale_x_discrete(limits = factor(1:10)) +
-          guides(color = guide_legend(nrow = 1, label.position = "bottom")) +
-          labs(
-            y = NULL,
-            x = "Decil de renda",
-            subtitle = paste0("**Razao de Palma**: ", palma)
-          ) +
-          coord_cartesian(ylim = c(-ceiling, ceiling)) +
-          boxplot_theme
-        
-        cowplot::plot_grid(
-          map_diff,
-          boxplot_diff,
-          nrow = 1,
-          rel_widths = c(0.7, 1)
-        )
-        
+      breaks <- c(-max_value, -max_value / 2, 0, max_value / 2, max_value)
+      labels <- breaks
+      if (grepl("TT", measure)) {
+        labels <- paste0(labels / 1000, "k")
+        labels[3] <- 0
       }
+      labels[1] <- paste0("< ", labels[1])
+      labels[5] <- paste0("> ", labels[5])
       
-      # second row - absolute difference map and boxplot
+      map_diff <- ggplot() +
+        geom_sf(
+          data = st_sf(access_diff),
+          aes(fill = truncated_value),
+          color = NA
+        ) +
+        facet_wrap(~ scenario) +
+        geom_sf(
+          data = st_sf(transit_shapes),
+          size = 0.5,
+          alpha = 0.7
+        ) +
+        geom_sf(data = city_shape, fill = NA) +
+        scale_fill_distiller(
+          name = "Diferença",
+          palette = "RdBu",
+          direction = 1,
+          limits = c(-max_value, max_value),
+          breaks = breaks,
+          labels = labels
+        ) +
+        labs(y = "Distribuição da dif.\nde acessibilidade") +
+        theme_minimal() +
+        theme(
+          axis.text = element_blank(),
+          axis.title.x = element_blank(),
+          panel.grid = element_blank(),
+          strip.text = element_text(size = 11),
+          legend.justification = "left"
+        )
       
-      row_two <- diff_row_generator(access_diff_abs, "abs")
+      # third row - accessibility differences distribution boxplo
       
-      # third row - relative difference map and boxplot
+      access_diff <- access_diff[decil > 0, ]
       
-      row_three <- diff_row_generator(access_diff_rel, "rel")
+      limit <- fcase(
+        measure == "CMATT", 100000,
+        measure == "CMAET", 80,
+        measure == "CMASB", 30
+      )
+      
+      boxplot_diff <- ggplot(access_diff) +
+        geom_segment(
+          aes(
+            x = 0.5, y = 0,
+            xend = 10.5, yend = 0
+          ),
+          color = "gray85"
+        ) +
+        geom_boxplot(
+          aes(
+            as.factor(decil),
+            get(relevant_var),
+            weight = pop,
+            color = as.factor(decil)
+          ),
+          outlier.size = 1.5,
+          outlier.alpha = 0.5,
+          show.legend = TRUE
+        ) +
+        facet_wrap(~ scenario, nrow = 1) +
+        scale_color_viridis_d(option = "cividis", name = "Decil de renda") +
+        scale_y_continuous(labels = label_func) +
+        scale_x_discrete(limits = factor(1:10)) +
+        labs(y = "Diferença de\nacessibilidade") +
+        coord_cartesian(ylim = c(-limit, limit)) +
+        guides(color = guide_legend(ncol = 2)) +
+        theme_minimal() +
+        theme(
+          axis.text.x = element_blank(),
+          axis.title.x = element_blank(),
+          panel.grid = element_blank(),
+          strip.text = element_text(size = 11),
+          legend.justification = "left"
+        )
       
       # join all three rows in a single plot
       
       final_plot <- cowplot::plot_grid(
-        row_one,
-        row_two,
-        row_three,
+        map_dist,
+        map_diff,
+        boxplot_diff,
         ncol = 1,
-        rel_heights = c(1, 1.2, 1.2),
-        labels = c("A)", "B)", "C)")
+        labels = c("A)", "B)", "C)"),
+        align = "v"
       )
       
       # save the result and return the path
@@ -861,7 +820,7 @@ plot_summary <- function(city,
         file_path,
         final_plot,
         width = 16,
-        height = 19.5,
+        height = 15.5,
         units = "cm"
       )
       
