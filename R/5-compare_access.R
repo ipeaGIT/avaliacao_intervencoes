@@ -156,10 +156,19 @@ create_dist_maps <- function(city,
     `:=`(geometry = i.geometry, decil = i.decil)
   ]
   
-  # download city and transit routes shapes, depending on the city
+  # download city and state shapes
   
   city_code <- ifelse(city == "for", 2304400, 5208707)
+  state_code <- ifelse(city == "for", "CE", "GO")
+  
   city_shape <- geobr::read_municipality(city_code)
+  state_shape <- geobr::read_municipality(state_code)
+  
+  city_bbox <- sf::st_bbox(city_shape)
+  xlim <- c(city_bbox$xmin, city_bbox$xmax)
+  ylim <- c(city_bbox$ymin, city_bbox$ymax)
+  
+  # read transit routes shapes
   
   if (city == "for") {
     
@@ -254,6 +263,7 @@ create_dist_maps <- function(city,
       breaks <- seq(0, max_break, length.out = 3)
       
       plot <- ggplot() +
+        geom_sf(data = state_shape, fill = "#efeeec", color = "gray75") +
         geom_sf(
           data = st_sf(access),
           aes(fill = get(relevant_var)),
@@ -266,6 +276,7 @@ create_dist_maps <- function(city,
         ) +
         geom_sf(data = city_shape, fill = NA) +
         facet_wrap(~ type) +
+        coord_sf(xlim, ylim) +
         scale_fill_viridis_c(
           name = "Acessibilidade por\ntransporte publico",
           option = "inferno",
@@ -279,7 +290,8 @@ create_dist_maps <- function(city,
           axis.text = element_blank(),
           axis.title = element_blank(),
           panel.grid = element_blank(),
-          strip.text = element_text(size = 11) # same size as legend title
+          strip.text = element_text(size = 11), # same size as legend title
+          panel.background = element_rect(fill = "#aadaff", color = NA)
         )
       
       dir_path <- file.path(
@@ -320,6 +332,7 @@ create_dist_maps <- function(city,
 # grid_path <- tar_read(grid_path)[1]
 # measure <- "CMATT"
 # travel_time <- 60
+# # create_diff_maps(city, access_diff_path, grid_path, travel_time)
 create_diff_maps <- function(city,
                              access_diff_path,
                              grid_path,
@@ -345,10 +358,19 @@ create_diff_maps <- function(city,
     `:=`(geometry = i.geometry, decil = i.decil)
   ]
   
-  # download city and transit routes shapes
+  # download city and state shapes
   
   city_code <- ifelse(city == "for", 2304400, 5208707)
+  state_code <- ifelse(city == "for", "CE", "GO")
+  
   city_shape <- geobr::read_municipality(city_code)
+  state_shape <- geobr::read_municipality(state_code)
+  
+  city_bbox <- sf::st_bbox(city_shape)
+  xlim <- c(city_bbox$xmin, city_bbox$xmax)
+  ylim <- c(city_bbox$ymin, city_bbox$ymax)
+  
+  # read transit routes shapes
   
   if (city == "for") {
     
@@ -439,6 +461,7 @@ create_diff_maps <- function(city,
       # plot settings
       
       plot <- ggplot() +
+        geom_sf(data = state_shape, fill = "#efeeec", color = "gray75") +
         geom_sf(
           data = st_sf(access_diff),
           aes(fill = get(relevant_var)),
@@ -450,7 +473,7 @@ create_diff_maps <- function(city,
           size = 0.5,
           alpha = 0.7
         ) +
-        geom_sf(data = city_shape, fill = NA) +
+        geom_sf(data = city_shape, fill = NA, color = "gray60") +
         scale_fill_distiller(
           name = "Diferença de\nacessibilidade",
           palette = "RdBu",
@@ -460,6 +483,7 @@ create_diff_maps <- function(city,
           breaks = breaks,
           labels = labels
         ) +
+        coord_sf(xlim, ylim) +
         theme_minimal() +
         theme(
           legend.position = "bottom",
@@ -467,7 +491,8 @@ create_diff_maps <- function(city,
           axis.text = element_blank(),
           axis.title = element_blank(),
           panel.grid = element_blank(),
-          strip.text = element_text(size = 11)
+          strip.text = element_text(size = 11),
+          panel.background = element_rect(fill = "#aadaff", color = NA)
         )
       
       # save the result and return the path
@@ -550,17 +575,19 @@ plot_summary <- function(city,
     )
   ]
   
-  # download city and transit routes shapes
+  # download city and state shapes
   
-  basemap <- readRDS(
-    paste0(
-      "../../data/acesso_oport/maptiles_crop/2018/mapbox/maptile_crop_mapbox_",
-      city,
-      "_2018.rds"
-    )
-  )
-
-  city_shape <- geobr::read_municipality(2304400)
+  city_code <- ifelse(city == "for", 2304400, 5208707)
+  state_code <- ifelse(city == "for", "CE", "GO")
+  
+  city_shape <- geobr::read_municipality(city_code)
+  state_shape <- geobr::read_municipality(state_code)
+  
+  city_bbox <- sf::st_bbox(city_shape)
+  xlim <- c(city_bbox$xmin, city_bbox$xmax)
+  ylim <- c(city_bbox$ymin, city_bbox$ymax)
+  
+  # read transit routes shapes
     
   gtfs <-  gtfstools::read_gtfs(
     "../../data/avaliacao_intervencoes/r5/graph/for_depois/gtfs_for_metrofor_2021-01_depois.zip"
@@ -636,6 +663,7 @@ plot_summary <- function(city,
       ]
       
       map_dist <- ggplot() +
+        geom_sf(data = state_shape, fill = "#efeeec", color = "gray75") +
         geom_sf(
           data = st_sf(access),
           aes(fill = get(relevant_var)),
@@ -654,6 +682,7 @@ plot_summary <- function(city,
           label = label_func,
           n.breaks = 4
         ) +
+        coord_sf(xlim, ylim) +
         labs(y = "Distribuição de\nacessibilidade") +
         theme_minimal() +
         theme(
@@ -661,7 +690,8 @@ plot_summary <- function(city,
           axis.title.x = element_blank(),
           panel.grid = element_blank(),
           strip.text = element_text(size = 11),
-          legend.justification = "left"
+          legend.justification = "left",
+          panel.background = element_rect(fill = "#aadaff", color = NA)
         )
       
       # second row - accessibility differences distribution map
@@ -701,6 +731,7 @@ plot_summary <- function(city,
       labels[5] <- paste0("> ", labels[5])
       
       map_diff <- ggplot() +
+        geom_sf(data = state_shape, fill = "#efeeec", color = "gray75") +
         geom_sf(
           data = st_sf(access_diff),
           aes(fill = truncated_value),
@@ -722,13 +753,15 @@ plot_summary <- function(city,
           labels = labels
         ) +
         labs(y = "Distribuição da dif.\nde acessibilidade") +
+        coord_sf(xlim, ylim) +
         theme_minimal() +
         theme(
           axis.text = element_blank(),
           axis.title.x = element_blank(),
           panel.grid = element_blank(),
           strip.text = element_text(size = 11),
-          legend.justification = "left"
+          legend.justification = "left",
+          panel.background = element_rect(fill = "#aadaff", color = NA)
         )
       
       # third row - accessibility differences distribution boxplo
