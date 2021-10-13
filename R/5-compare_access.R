@@ -180,16 +180,7 @@ create_dist_maps <- function(city,
     `:=`(geometry = i.geometry, decil = i.decil)
   ]
   
-  # download basemap and city and transit routes shapes, depending on the city
-  # using 2018 data to generate the basemap of goiania city only, not MR 
-  
-  basemap <- readRDS(
-    paste0(
-      "../../data/acesso_oport/maptiles_crop/2018/mapbox/maptile_crop_mapbox_",
-      city,
-      "_2018.rds"
-    )
-  )
+  # download city and transit routes shapes, depending on the city
   
   city_code <- ifelse(city == "for", 2304400, 5208707)
   city_shape <- geobr::read_municipality(city_code)
@@ -257,14 +248,7 @@ create_dist_maps <- function(city,
     )
     
   }
-  
-  # transform sf objects' crs to 3857 so they became "compatible" with the
-  # basemap raster
-  
-  access <- st_transform(st_sf(access), 3857)
-  transit_shapes <- st_transform(st_sf(transit_shapes), 3857)
-  city_shape <- st_transform(city_shape, 3857)
-  
+
   # generate figures for each of our desired variables
   
   measures <- c("CMATT", "CMAET", "CMASB")
@@ -287,17 +271,13 @@ create_dist_maps <- function(city,
       }
       
       plot <- ggplot() +
-        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        # coord_equal() +
-        # scale_fill_identity() +
-        # ggnewscale::new_scale_fill() +
         geom_sf(
-          data = access,
+          data = st_sf(access),
           aes(fill = get(relevant_var)),
           color = NA
         ) +
         geom_sf(
-          data = transit_shapes,
+          data = st_sf(transit_shapes),
           size = 0.5,
           alpha = 0.7
         ) +
@@ -380,6 +360,8 @@ create_diff_maps <- function(city,
     on = c(fromId = "id_hex"),
     `:=`(geometry = i.geometry, decil = i.decil)
   ]
+  
+  # download city and transit routes shapes
   
   city_code <- ifelse(city == "for", 2304400, 5208707)
   city_shape <- geobr::read_municipality(city_code)
@@ -540,49 +522,42 @@ create_diff_maps <- function(city,
 
 
 # city <- tar_read(only_for)
+# scenarios <- tar_read(scenarios)
 # access_paths <- tar_read(full_access)
-# access_diff_abs_path <- tar_read(full_access_diff_abs)
-# access_diff_rel_path <- tar_read(full_access_diff_rel)
+# access_diff_path <- tar_read(full_access_diff)
 # grid_path <- tar_read(grid_path)[1]
 # measure <- "CMATT"
 # travel_time <- 60
 plot_summary <- function(city,
+                         scenarios,
                          access_paths,
-                         access_diff_abs_path,
-                         access_diff_rel_path,
+                         access_diff_path,
                          grid_path,
                          travel_time) {
   
+  names(access_paths) <- scenarios
   access <- lapply(access_paths, readRDS)
-  access_diff_abs <- readRDS(access_diff_abs_path)
-  access_diff_rel <- readRDS(access_diff_rel_path)
+  access_diff <- readRDS(access_diff_path)
   grid <- setDT(readRDS(grid_path))
   env <- environment()
   
-  names(access) <- c("Antes", "Depois")
   access <- rbindlist(access, idcol = "scenario")
   access <- access[travel_time == get("travel_time", envir = env)]
   access[
     grid,
     on = c(fromId = "id_hex"),
+    `:=`(geometry = i.geometry, decil = i.decil, pop = i.pop_total)
+  ]
+  
+  access_diff <- access_diff[type == "abs"]
+  access_diff <- access_diff[travel_time == get("travel_time", envir = env)]
+  access_diff[
+    grid,
+    on = c(fromId = "id_hex"),
     `:=`(geometry = i.geometry, decil = i.decil)
   ]
   
-  access_diff_abs <- access_diff_abs[travel_time == get("travel_time", envir = env)]
-  access_diff_abs[
-    grid,
-    on = c(fromId = "id_hex"),
-    `:=`(geometry = i.geometry, decil = i.decil, pop = i.pop_total)
-  ]
-  
-  access_diff_rel <- access_diff_rel[travel_time == get("travel_time", envir = env)]
-  access_diff_rel[
-    grid,
-    on = c(fromId = "id_hex"),
-    `:=`(geometry = i.geometry, decil = i.decil, pop = i.pop_total)
-  ]
-  
-  # download basemap and city and transit routes shapes
+  # download city and transit routes shapes
   
   basemap <- readRDS(
     paste0(
@@ -627,20 +602,11 @@ plot_summary <- function(city,
   )
   transit_shapes[
     ,
-    scenario := c(
-      rep("Depois", n_trips),
-      rep("Antes", n_trips - 1)
+    scenario := factor(
+      c(rep("Depois", n_trips), rep("Antes", n_trips - 1)),
+      levels = c("Antes", "Depois")
     )
   ]
-  
-  # transform sf objects' crs to 3857 so they became "compatible" with the
-  # basemap raster
-  
-  access <- st_transform(st_sf(access), 3857)
-  access_diff_abs <- setDT(st_transform(st_sf(access_diff_abs), 3857))
-  access_diff_rel <- setDT(st_transform(st_sf(access_diff_rel), 3857))
-  transit_shapes <- st_transform(st_sf(transit_shapes), 3857)
-  city_shape <- st_transform(city_shape, 3857)
   
   # three different plots
   
@@ -664,19 +630,26 @@ plot_summary <- function(city,
       }
       
       # first row - "normal" accessibility distribution
+      # dont include counterfactual scenario in this plot
+      
+      access <- access[scenario != "contrafactual"]
+      access[
+        ,
+        scenario := factor(
+          scenario,
+          levels = c("antes", "depois"),
+          labels = c("Antes", "Depois")
+        )
+      ]
       
       map_dist <- ggplot() +
-        # geom_raster(data = basemap, aes(x, y, fill = hex)) +
-        # coord_equal() +
-        # scale_fill_identity() +
-        # ggnewscale::new_scale_fill() +
         geom_sf(
-          data = access,
+          data = st_sf(access),
           aes(fill = get(relevant_var)),
           color = NA
         ) +
         geom_sf(
-          data = transit_shapes,
+          data = st_sf(transit_shapes),
           size = 0.5,
           alpha = 0.7
         ) +

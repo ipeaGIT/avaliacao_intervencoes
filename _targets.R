@@ -270,19 +270,18 @@ list(
       scenarios
     ),
     format = "file"
+  ),
+  tar_target(
+    all_modes_summary,
+    plot_summary(
+      only_for,
+      scenarios,
+      full_access,
+      full_access_diff,
+      grid_path,
+      tt_thresholds
+    ),
+    pattern = cross(head(grid_path, 1), tt_thresholds),
+    format = "file"
   )
-  # ,
-  # tar_target(
-  #   all_modes_summary,
-  #   plot_summary(
-  #     only_for,
-  #     full_access,
-  #     full_access_diff_abs,
-  #     full_access_diff_rel,
-  #     grid_path,
-  #     tt_thresholds
-  #   ),
-  #   pattern = cross(head(grid_path, 1), tt_thresholds),
-  #   format = "file"
-  # )
 )
