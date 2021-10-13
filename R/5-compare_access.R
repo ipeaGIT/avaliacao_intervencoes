@@ -1,24 +1,26 @@
 # city <- tar_read(both_cities)[1]
 # access_diff_path <- tar_read(transit_access_diff)[1]
-# access_paths <- tar_read(access_metadata)$access_file[1:3]
-# scenarios <- tar_read(access_metadata)$scenario[1:3]
 # grid_path <- tar_read(grid_path)[1]
 # measure <- "CMATT"
 # travel_time <- 60
 create_boxplots <- function(city,
                             access_diff_path,
-                            access_paths,
-                            scenarios,
                             grid_path,
                             travel_time) {
   
-  names(access_paths) <- scenarios
-  access <- lapply(access_paths, readRDS)
   access_diff <- readRDS(access_diff_path)
   grid <- setDT(readRDS(grid_path))
   env <- environment()
   
   access_diff <- access_diff[type == "abs"]
+  access_diff <- access_diff[
+    ,
+    scenario := factor(
+      scenario,
+      levels = c("depois", "contrafactual"),
+      labels = c("Previsto", "Contrafactual")
+    )
+  ]
   access_diff <- access_diff[travel_time == get("travel_time", envir = env)]
   access_diff[
     grid,
@@ -27,55 +29,7 @@ create_boxplots <- function(city,
   ]
   access_diff <- access_diff[decil > 0]
   
-  access <- rbindlist(access, idcol = "scenario")
-  access <- access[travel_time == get("travel_time", envir = env)]
-  access[
-    grid,
-    on = c(fromId = "id_hex"),
-    `:=`(pop = i.pop_total, decil = i.decil)
-  ]
-  access <- access[decil > 0]
-  
   measures <- c("CMATT", "CMAET", "CMASB")
-  relevant_vars <- paste0("only_transit_", measures)
-  
-  # nest dataframes of accessibility distribution for each scenario to
-  # calculate the palma ratio of each case
-  
-  palma_dt <- access[
-    ,
-    .(dist = list(.SD)),
-    by = .(scenario),
-    .SDcols = c(relevant_vars, "pop", "decil")
-  ]
-  
-  # calculate the palma ratio for each relevant_var
-  
-  palma_expr <- paste0(
-    "palma_", measures,
-    "=",
-    "vapply(dist, function(dt) format(calculate_palma(dt,'", relevant_vars,
-    "'), digits = 2, nsmall = 2), character(1))",
-    collapse = ", "
-  )
-  palma_expr <- paste0("`:=`(", palma_expr, ")")
-  
-  palma_dt[, eval(parse(text = palma_expr))]
-  palma_dt[, dist := NULL]
-  
-  # separate "antes" and c("contrafactual", "depois") scenarios to use the
-  # latter in the plot facets
-  
-  palma_before <- palma_dt[scenario == "antes"]
-  palma_after <- palma_dt[scenario != "antes"]
-  palma_after <- palma_after[
-    , 
-    scenario := factor(
-      scenario,
-      levels = c("depois", "contrafactual"),
-      labels = c("Previsto", "Contrafactual")
-    )
-  ]
   
   # create a plot for each measure and return the file paths
   
@@ -84,7 +38,6 @@ create_boxplots <- function(city,
     FUN.VALUE = character(1),
     FUN = function(measure) {
       relevant_var <- paste0("only_transit_", measure)
-      palma_var <- paste0("palma_", measure)
       
       limit <- fcase(
         measure == "CMATT" && city == "for", 100000,
@@ -94,33 +47,6 @@ create_boxplots <- function(city,
         measure == "CMAET" && city == "goi", 8,
         measure == "CMASB" && city == "goi", 5
       )
-      
-      # change scenario names to include palma ratio
-      # makes a copy of 'access_diff' to ensure that previous plots don't change
-      # the data of current one
-      
-      access_diff <- access_diff[
-        ,
-        scenario_factor := factor(
-          scenario,
-          levels = c("depois", "contrafactual"),
-          labels = c(
-            paste0(
-              "Previsto<br>",
-              "<span style='font-size:9.5pt'>(Razao de Palma = ",
-              palma_dt[scenario == "depois"][[palma_var]],
-              ")</span>"
-            ),
-            paste0(
-              "Contrafactual<br>",
-              "<span style='font-size:9.5pt'>(Razao de Palma = ",
-              palma_dt[scenario == "contrafactual"][[palma_var]],
-              ")</span>"
-            )
-          )
-        )
-      ]
-      
       
       # plot settings
       
@@ -142,18 +68,7 @@ create_boxplots <- function(city,
           outlier.size = 1.5,
           outlier.alpha = 0.5
         ) +
-        # geom_label(
-        #   data = palma_after,
-        #   aes(
-        #     x = 5.5,
-        #     y = limit * 1.05,
-        #     label = paste0("Razão de Palma = ", get(palma_var))
-        #   ),
-        #   fill = "white",
-        #   label.size = 0,
-        #   size = grid::convertX(grid::unit(9.5, "points"), "mm")
-        # ) +
-        facet_wrap(~ scenario_factor, nrow = 1) +
+        facet_wrap(~ scenario, nrow = 1) +
         scale_color_viridis_d(
           option = "cividis",
           labels = c("1\nmais pobres", 2:9, "10\nmais ricos"),
@@ -171,7 +86,7 @@ create_boxplots <- function(city,
           plot.subtitle = element_markdown(),
           legend.position = "bottom",
           legend.text.align = 0.5,
-          strip.text = element_markdown(size = 11)
+          strip.text = element_text(size = 11)
         )
       
       # return the result so the target follows the file

@@ -168,14 +168,12 @@ list(
     create_boxplots(
       both_cities,
       transit_access_diff,
-      access_metadata$access_file,
-      access_metadata$scenario,
       grid_path,
       tt_thresholds
     ),
     pattern = cross(
       map(
-        both_cities, transit_access_diff, access_metadata, grid_path
+        both_cities, transit_access_diff, grid_path
       ),
       tt_thresholds
     ),
