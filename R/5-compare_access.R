@@ -410,8 +410,8 @@ create_diff_maps <- function(city,
       
       max_value <- fcase(
         measure == "CMATT", 100000,
-        measure == "CMAET", 50,
-        measure == "CMASB", 15
+        measure == "CMAET", 60,
+        measure == "CMASB", 20
       )
       
       access_diff[
@@ -674,8 +674,8 @@ plot_summary <- function(city,
       
       max_value <- fcase(
         measure == "CMATT", 100000,
-        measure == "CMAET", 50,
-        measure == "CMASB", 15
+        measure == "CMAET", 60,
+        measure == "CMASB", 20
       )
       
       access_diff[
