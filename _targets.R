@@ -191,6 +191,16 @@ list(
     format = "file"
   ),
   tar_target(
+    access_gains_comparison,
+    compare_gains(
+      both_cities,
+      transit_access_diff,
+      grid_path
+    ),
+    pattern = map(both_cities, transit_access_diff, grid_path),
+    format = "file"
+  ),
+  tar_target(
     bike_matrix,
     bike_ttm(only_for, scenarios, graph, points_path),
     pattern = cross(

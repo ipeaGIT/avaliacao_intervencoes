@@ -872,7 +872,7 @@ compare_palma <- function(city, access_paths, scenarios, grid_path) {
     scenario := factor(
       scenario,
       levels = c("antes", "depois", "contrafactual"),
-      labels = c("Antes", "Depois", "Contrafactual")
+      labels = c("Antes", "Depois (Previsto)", "Depois (Contrafactual)")
     )
   ]
   
@@ -1042,6 +1042,121 @@ compare_palma <- function(city, access_paths, scenarios, grid_path) {
   
   all_paths <- c(faceted_path, individual_paths)
   return(all_paths)
+  
+}
+
+
+# city <- tar_read(both_cities)[1]
+# access_diff_path <- tar_read(transit_access_diff)[1]
+# grid_path <- tar_read(grid_path)[1]
+# measure <- "CMATT"
+compare_gains <- function(city, access_diff_path, grid_path) {
+  
+  grid <- setDT(readRDS(grid_path))
+  access_diff <- readRDS(access_diff_path)
+  access_diff <- access_diff[type == "abs"]
+  access_diff[
+    grid,
+    on = c(fromId = "id_hex"),
+    `:=`(pop = i.pop_total)
+  ]
+  access_diff[
+    ,
+    scenario := factor(
+      scenario,
+      levels = c("depois", "contrafactual"),
+      labels = c("Previsto", "Contrafactual")
+    )
+  ]
+  
+  measures <- c("CMATT", "CMAET", "CMASB")
+  relevant_vars <- paste0("only_transit_", measures)
+  
+  # melt the data to create a faceted chart
+  
+  access_diff <- melt(
+    access_diff,
+    measure.vars = relevant_vars,
+    variable.name = "opportunities",
+    value.name = "access_gain"
+  )
+  access_diff[, opportunities := gsub("only_transit_", "", opportunities)]
+  
+  # convert the opportunities' names to factor
+  
+  access_diff[
+    ,
+    opportunities_factor := factor(
+      opportunities,
+      levels = measures,
+      labels = c("Emprego", "Educação", "Saúde")
+    )
+  ]
+  
+  # calculate the weighted mean of each scenario by travel time threshold and
+  # measure
+  
+  access_diff_summary <- access_diff[
+    ,
+    .(
+      weighted_median = matrixStats::weightedMedian(
+        access_gain,
+        w = pop,
+        na.rm = TRUE
+      ),
+      q1 = quantile(access_gain, na.rm = TRUE)[["25%"]],
+      q3 = quantile(access_gain, na.rm = TRUE)[["75%"]]
+    ),
+    by = .(scenario, travel_time, opportunities, opportunities_factor)
+  ]
+  
+  # plot settings - first a single chart including all three opportunities
+  
+  plot_theme <- theme_minimal() +
+    theme(
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_line(color = "gray95"),
+      strip.text = element_text(size = 11)
+    )
+  
+  plot <- ggplot(access_diff_summary) +
+    geom_segment(
+      aes(
+        x = 0.0, y = 0,
+        xend = 60, yend = 0
+      ),
+      color = "gray75"
+    ) +
+    geom_line(aes(travel_time, weighted_median, color = scenario)) +
+    geom_errorbar(
+      aes(travel_time, ymin = q1, ymax = q3, color = scenario)
+    ) +
+    facet_wrap(~ opportunities_factor, scales = "free") +
+    scale_y_continuous(name = "Ganho de acessibilidade") +
+    scale_x_continuous(name = "Limite de tempo de viagem") +
+    scale_color_discrete(name = "Cenário") +
+    plot_theme
+  
+  # save the result and store the path
+  
+  dir_path <- file.path(
+    "../../data/avaliacao_intervencoes",
+    city,
+    "figures"
+  )
+  if (!dir.exists(dir_path)) dir.create(dir_path)
+  
+  dir_path <- file.path(dir_path, "access_gains_comparison")
+  if (!dir.exists(dir_path)) dir.create(dir_path)
+  
+  faceted_path <- file.path(dir_path, paste0("faceted.png"))
+  ggsave(
+    faceted_path,
+    plot,
+    width = 16,
+    height = 6,
+    units = "cm"
+  )
   
 }
 
