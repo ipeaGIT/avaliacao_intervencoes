@@ -932,6 +932,7 @@ compare_palma <- function(city, access_paths, scenarios, grid_path) {
   ]
   label_pos[, ggplot_range := max_palma * 1.05 + 0.0125]
   label_pos[, y_pos := 1 + 0.01 * ggplot_range]
+  label_pos[, opportunities := measures]
   
   # plot settings - first a single chart including all three opportunities
   
@@ -980,35 +981,67 @@ compare_palma <- function(city, access_paths, scenarios, grid_path) {
   dir_path <- file.path(dir_path, "palma_comparison")
   if (!dir.exists(dir_path)) dir.create(dir_path)
   
-  file_path <- file.path(dir_path, paste0("faceted.png"))
+  faceted_path <- file.path(dir_path, paste0("faceted.png"))
   ggsave(
-    file_path,
+    faceted_path,
     plot,
     width = 16,
-    height = 9,
+    height = 6,
     units = "cm"
   )
   
-  # # save and return the result so the target follows the file
-  # 
-  # dir_path <- file.path(
-  #   "../../data/avaliacao_intervencoes",
-  #   city,
-  #   "figures"
-  # )
-  # if (!dir.exists(dir_path)) dir.create(dir_path)
-  # 
-  # dir_path <- file.path(dir_path, "palma_comparison")
-  # if (!dir.exists(dir_path)) dir.create(dir_path)
-  # 
-  # file_path <- file.path(dir_path, paste0(measure, ".png"))
-  # ggsave(
-  #   file_path,
-  #   plot,
-  #   width = 16,
-  #   height = 6,
-  #   units = "cm"
-  # )
+  # individual plots for each measure
+  
+  individual_paths <- vapply(
+    measures,
+    FUN.VALUE = character(1),
+    FUN = function(measure) {
+      filtered_access <- access[opportunities == measure]
+      env <- environment()
+      
+      plot <- ggplot(filtered_access) +
+        geom_segment(
+          aes(
+            x = 0.0, y = 1,
+            xend = 60, yend = 1
+          ),
+          color = "gray75"
+        ) +
+        geom_text(
+          aes(
+            x = 0,
+            y = label_pos[opportunities == get("measure", envir = env)]$y_pos,
+            label = "Razão de Palma = 1"
+          ),
+          color = "gray75",
+          hjust = 0,
+          vjust = 0
+        ) +
+        geom_line(aes(travel_time, palma, color = scenario)) +
+        scale_y_continuous(
+          name = "Razão de Palma",
+          expand = expansion(mult = c(0.0125, 0))
+        ) +
+        scale_x_continuous(name = "Limite de tempo de viagem") +
+        scale_color_discrete(name = "Cenário") +
+        expand_limits(y = 0) +
+        plot_theme
+      
+      # save and return the result so the target follows the file
+      
+      file_path <- file.path(dir_path, paste0(measure, ".png"))
+      ggsave(
+        file_path,
+        plot,
+        width = 16,
+        height = 6,
+        units = "cm"
+      )
+    }
+  )
+  
+  all_paths <- c(faceted_path, individual_paths)
+  return(all_paths)
   
 }
 
