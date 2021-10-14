@@ -867,6 +867,14 @@ compare_palma <- function(city, access_paths, scenarios, grid_path) {
     `:=`(pop = i.pop_total, decil = i.decil)
   ]
   access <- access[decil > 0]
+  access[
+    ,
+    scenario := factor(
+      scenario,
+      levels = c("antes", "depois", "contrafactual"),
+      labels = c("Antes", "Depois", "Contrafactual")
+    )
+  ]
   
   measures <- c("CMATT", "CMAET", "CMASB")
   relevant_vars <- paste0("only_transit_", measures)
@@ -884,7 +892,7 @@ compare_palma <- function(city, access_paths, scenarios, grid_path) {
   # calculate the palma ratio for each relevant_var
   
   palma_expr <- paste0(
-    "palma_", measures,
+    measures,
     "=",
     "vapply(dist, function(dt) calculate_palma(dt,'", relevant_vars,
     "'), numeric(1))",
@@ -894,49 +902,113 @@ compare_palma <- function(city, access_paths, scenarios, grid_path) {
   
   access[, eval(parse(text = palma_expr))]
   
-  # remove the 'dist' column, otherwise the data.table is kindle clunky
+  # melt the data to create a faceted chart
   
-  access[, dist := NULL]
-  
-  # generate one file for each measure
-  
-  paths <- vapply(
-    measures,
-    FUN.VALUE = character(1),
-    FUN = function(measure) {
-      palma_var <- paste0("palma_", measure)
-      
-      plot_theme <- theme_minimal() +
-        theme(
-          panel.grid.minor = element_blank()
-        )
-      
-      plot <- ggplot(access) +
-        geom_line(aes(travel_time, get(palma_var), color = scenario)) +
-        plot_theme
-      
-      # save and return the result so the target follows the file
-      
-      dir_path <- file.path(
-        "../../data/avaliacao_intervencoes",
-        city,
-        "figures"
-      )
-      if (!dir.exists(dir_path)) dir.create(dir_path)
-      
-      dir_path <- file.path(dir_path, "palma_comparison")
-      if (!dir.exists(dir_path)) dir.create(dir_path)
-      
-      file_path <- file.path(dir_path, paste0(measure, ".png"))
-      ggsave(
-        file_path,
-        plot,
-        width = 16,
-        height = 6,
-        units = "cm"
-      )
-    }
+  access <- melt(
+    access,
+    id.vars = c("scenario", "travel_time"),
+    measure.vars = measures,
+    variable.name = "opportunities",
+    value.name = "palma"
   )
+  
+  # convert the opportunities' names to factor
+  
+  access[
+    ,
+    opportunities_factor := factor(
+      opportunities,
+      levels = measures,
+      labels = c("Emprego", "Educação", "Saúde")
+    )
+  ]
+  
+  # dataframe for positioning label above segment
+  
+  label_pos <- access[
+    ,
+    .(max_palma = max(palma, na.rm = TRUE)),
+    by = opportunities_factor
+  ]
+  label_pos[, ggplot_range := max_palma * 1.05 + 0.0125]
+  label_pos[, y_pos := 1 + 0.01 * ggplot_range]
+  
+  # plot settings - first a single chart including all three opportunities
+  
+  plot_theme <- theme_minimal() +
+    theme(
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_line(color = "gray95"),
+      strip.text = element_text(size = 11)
+    )
+  
+  plot <- ggplot(access) +
+    geom_segment(
+      aes(
+        x = 0.0, y = 1,
+        xend = 60, yend = 1
+      ),
+      color = "gray75"
+    ) +
+    geom_text(
+      data = label_pos,
+      aes(x = 0, y = y_pos, label = "R.P. = 1"),
+      color = "gray75",
+      hjust = 0,
+      vjust = 0
+    ) +
+    geom_line(aes(travel_time, palma, color = scenario)) +
+    facet_wrap(~ opportunities_factor, scales = "free") +
+    scale_y_continuous(
+      name = "Razão de Palma",
+      expand = expansion(mult = c(0.0125, 0))
+    ) +
+    scale_x_continuous(name = "Limite de tempo de viagem") +
+    scale_color_discrete(name = "Cenário") +
+    expand_limits(y = 0) +
+    plot_theme
+  
+  # save the result and store the path
+  
+  dir_path <- file.path(
+    "../../data/avaliacao_intervencoes",
+    city,
+    "figures"
+  )
+  if (!dir.exists(dir_path)) dir.create(dir_path)
+  
+  dir_path <- file.path(dir_path, "palma_comparison")
+  if (!dir.exists(dir_path)) dir.create(dir_path)
+  
+  file_path <- file.path(dir_path, paste0("faceted.png"))
+  ggsave(
+    file_path,
+    plot,
+    width = 16,
+    height = 9,
+    units = "cm"
+  )
+  
+  # # save and return the result so the target follows the file
+  # 
+  # dir_path <- file.path(
+  #   "../../data/avaliacao_intervencoes",
+  #   city,
+  #   "figures"
+  # )
+  # if (!dir.exists(dir_path)) dir.create(dir_path)
+  # 
+  # dir_path <- file.path(dir_path, "palma_comparison")
+  # if (!dir.exists(dir_path)) dir.create(dir_path)
+  # 
+  # file_path <- file.path(dir_path, paste0(measure, ".png"))
+  # ggsave(
+  #   file_path,
+  #   plot,
+  #   width = 16,
+  #   height = 6,
+  #   units = "cm"
+  # )
   
 }
 
