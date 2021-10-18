@@ -126,32 +126,34 @@ create_boxplots <- function(city,
 
 # city <- "for"
 # access_paths <- tar_read(access_metadata)$access_file[1:3]
-# scenario <- tar_read(access_metadata)$scenario[1:3]
+# scenarios <- tar_read(access_metadata)$scenario[1:3]
 # grid_path <- tar_read(grid_path)[1]
 # measure <- "CMATT"
 # travel_time <- 60
 create_dist_maps <- function(city,
                              access_paths,
-                             scenario,
+                             scenarios,
                              grid_path,
                              travel_time) {
   
   access <- lapply(access_paths, readRDS)
-  names(access) <- scenario
+  names(access) <- scenarios
   grid <- setDT(readRDS(grid_path))
   env <- environment()
-  
-  # dont include counterfactual scenario in this plot
-  
-  access$contrafactual <- NULL
-  names(access) <- c("Antes", "Depois")
   
   # join accessibility difference datasets to create a faceted chart and filter
   # to keep only relevant travel_time
   
-  access <- rbindlist(access, idcol = "type")
+  access <- rbindlist(access, idcol = "scenario")
   access <- access[travel_time == get("travel_time", envir = env)]
-  
+  access[
+    ,
+    scenario := factor(
+      scenario,
+      levels = c("antes", "depois", "contrafactual"),
+      labels = c("Antes", "Depois (Previsto)", "Depois (Alternativo)")
+    )
+  ]
   access[
     grid,
     on = c(fromId = "id_hex"),
@@ -203,13 +205,18 @@ create_dist_maps <- function(city,
     
     transit_shapes <- rbind(
       transit_shapes,
+      transit_shapes,
       transit_shapes[origin_file != "shapes"]
     )
     transit_shapes[
       ,
-      type := c(
-        rep("Depois", n_trips),
-        rep("Antes", n_trips - 1)
+      scenario := factor(
+        c(
+          rep("Depois (Alternativo)", n_trips),
+          rep("Depois (Previsto)", n_trips),
+          rep("Antes", n_trips - 1)
+        ),
+        levels = c("Antes", "Depois (Previsto)", "Depois (Alternativo)")
       )
     ]
     
@@ -277,7 +284,7 @@ create_dist_maps <- function(city,
           alpha = 0.7
         ) +
         geom_sf(data = city_shape, fill = NA) +
-        facet_wrap(~ type) +
+        facet_wrap(~ scenario) +
         coord_sf(xlim, ylim) +
         scale_fill_viridis_c(
           name = "Acessibilidade por\ntransporte publico",
@@ -307,9 +314,9 @@ create_dist_maps <- function(city,
       if (!dir.exists(dir_path)) dir.create(dir_path)
       
       if (city == "for") {
-        plot_height <- 9
+        plot_height <- 7.5
       } else {
-        plot_height <- 10
+        plot_height <- 8.5
       }
       
       file_path <- file.path(dir_path, paste0(measure, travel_time, ".png"))
