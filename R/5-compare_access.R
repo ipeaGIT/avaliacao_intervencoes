@@ -253,6 +253,26 @@ create_dist_maps <- function(city,
     FUN = function(measure) {
       relevant_var <- paste0("only_transit_", measure)
       
+      # access[
+      #   ,
+      #   cde := cut(
+      #     get(relevant_var),
+      #     breaks = BAMMtools::getJenksBreaks(get(relevant_var), 11)
+      #   )
+      # ]
+      # 
+      # access[
+      #   ,
+      #   abc := cut(
+      #     get(relevant_var),
+      #     breaks = quantile(
+      #       get(relevant_var),
+      #       probs = seq(0, 1, 0.1),
+      #       include.lowest = TRUE
+      #     )
+      #   )
+      # ]
+      
       label <- if (grepl("TT", measure)) {
         scales::label_number(
           accuracy = 1,
@@ -299,7 +319,7 @@ create_dist_maps <- function(city,
           axis.text = element_blank(),
           axis.title = element_blank(),
           panel.grid = element_blank(),
-          strip.text = element_text(size = 11), # same size as legend title
+          strip.text = element_text(size = 11),
           panel.background = element_rect(fill = "#aadaff", color = NA)
         )
       
@@ -852,6 +872,144 @@ plot_summary <- function(city,
       
       return(file_path)
       
+    }
+  )
+  
+}
+
+
+# city <- tar_read(both_cities)[1]
+# access_paths <- tar_read(access_metadata)$access_file[1:3]
+# scenarios <- tar_read(access_metadata)$scenario[1:3]
+# grid_path <- tar_read(grid_path)[1]
+# travel_time <- tar_rea
+# measure <- "CMATT"
+# travel_time <- 60
+create_palma_bars <- function(city,
+                              access_paths,
+                              scenarios,
+                              grid_path,
+                              travel_time) {
+  
+  grid <- setDT(readRDS(grid_path))
+  env <- environment()
+  
+  names(access_paths) <- scenarios
+  access <- lapply(access_paths, readRDS)
+  access <- rbindlist(access, idcol = "scenario")
+  access <- access[travel_time == get("travel_time", envir = env)]
+  access[
+    grid,
+    on = c(fromId = "id_hex"),
+    `:=`(pop = i.pop_total, decil = i.decil)
+  ]
+  access <- access[decil > 0]
+  access[
+    ,
+    scenario := factor(
+      scenario,
+      levels = c("antes", "depois", "contrafactual"),
+      labels = c("Antes", "Depois (Previsto)", "Depois (Alternativo)")
+    )
+  ]
+  
+  measures <- c("CMATT", "CMAET", "CMASB")
+  relevant_vars <- paste0("only_transit_", measures)
+  
+  # nest dataframes of accessibility distribution for each scenario to calculate
+  # the palma ratio
+  
+  access <- access[
+    ,
+    .(dist = list(.SD)),
+    by = scenario,
+    .SDcols = c(relevant_vars, "pop", "decil")
+  ]
+  
+  # calculate the palma ratio for each relevant_var
+  
+  palma_expr <- paste0(
+    measures,
+    "=",
+    "vapply(dist, function(dt) calculate_palma(dt,'", relevant_vars,
+    "'), numeric(1))",
+    collapse = ", "
+  )
+  palma_expr <- paste0("`:=`(", palma_expr, ")")
+  
+  access[, eval(parse(text = palma_expr))]
+  
+  # melt the data to create a faceted chart
+  
+  access <- melt(
+    access,
+    id.vars = "scenario",
+    measure.vars = measures,
+    variable.name = "opportunities",
+    value.name = "palma"
+  )
+  
+  # individual plots for each measure
+  
+  individual_paths <- vapply(
+    measures,
+    FUN.VALUE = character(1),
+    FUN = function(measure) {
+      filtered_access <- access[opportunities == measure]
+      env <- environment()
+      
+      # create data.table to position label on top of each bar
+      
+      label_pos <- copy(filtered_access)[
+        ,
+        `:=`(
+          y_pos = palma - max(palma) * 0.05,
+          palma_text = format(palma, digits = 2, nsmall = 2)
+        )
+      ]
+      
+      plot <- ggplot(filtered_access) +
+        geom_col(aes(scenario, palma, fill = scenario)) +
+        geom_text(
+          data = label_pos,
+          aes(x = scenario, y = y_pos, label = palma_text),
+          color = "white",
+          vjust = 1,
+          size = 6
+        ) +
+        scale_y_continuous(name = "Razão de Palma") +
+        scale_x_discrete(name = "Cenário") +
+        scale_fill_discrete(
+          name = "Cenário",
+          type = c("gray50", "#F8766D", "#00BFC4")
+        ) +
+        theme_minimal() +
+        theme(
+          panel.grid = element_blank(),
+          axis.text.y = element_blank(),
+          legend.position = "none"
+        )
+      
+      # save and return the result
+      
+      dir_path <- file.path(
+        "../../data/avaliacao_intervencoes",
+        city,
+        "figures"
+      )
+      if (!dir.exists(dir_path)) dir.create(dir_path)
+      
+      dir_path <- file.path(dir_path, "columns_palma")
+      if (!dir.exists(dir_path)) dir.create(dir_path)
+      
+      file_path <- file.path(dir_path, paste0(measure, travel_time, ".png"))
+      ggsave(
+        file_path,
+        plot,
+        width = 16,
+        height = 6,
+        units = "cm"
+      )
     }
   )
   

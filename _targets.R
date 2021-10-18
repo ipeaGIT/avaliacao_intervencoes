@@ -180,6 +180,21 @@ list(
     format = "file"
   ),
   tar_target(
+    palma_bars,
+    create_palma_bars(
+      both_cities,
+      access_metadata$access_file,
+      access_metadata$scenario,
+      grid_path,
+      tt_thresholds
+    ),
+    pattern = cross(
+      map(both_cities, access_metadata, grid_path),
+      tt_thresholds
+    ),
+    format = "file"
+  ),
+  tar_target(
     palma_comparison,
     compare_palma(
       both_cities,
