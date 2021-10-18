@@ -1129,7 +1129,8 @@ compare_gains <- function(city, access_diff_path, grid_path) {
     ) +
     geom_line(aes(travel_time, weighted_median, color = scenario)) +
     geom_errorbar(
-      aes(travel_time, ymin = q1, ymax = q3, color = scenario)
+      aes(travel_time, ymin = q1, ymax = q3, color = scenario),
+      alpha = 0.5
     ) +
     facet_wrap(~ opportunities_factor, scales = "free") +
     scale_y_continuous(name = "Ganho de acessibilidade") +
@@ -1157,6 +1158,49 @@ compare_gains <- function(city, access_diff_path, grid_path) {
     height = 6,
     units = "cm"
   )
+  
+  # individual plots for each measure
+  
+  individual_paths <- vapply(
+    measures,
+    FUN.VALUE = character(1),
+    FUN = function(measure) {
+      filtered_access_diff <- access_diff_summary[opportunities == measure]
+      env <- environment()
+      
+      plot <- ggplot(filtered_access_diff) +
+        geom_segment(
+          aes(
+            x = 0.0, y = 0,
+            xend = 60, yend = 0
+          ),
+          color = "gray75"
+        ) +
+        geom_line(aes(travel_time, weighted_median, color = scenario)) +
+        geom_errorbar(
+          aes(travel_time, ymin = q1, ymax = q3, color = scenario),
+          alpha = 0.5
+        ) +
+        scale_y_continuous(name = "Ganho de acessibilidade") +
+        scale_x_continuous(name = "Limite de tempo de viagem") +
+        scale_color_discrete(name = "Cenário") +
+        plot_theme
+      
+      # save and return the result so the target follows the file
+      
+      file_path <- file.path(dir_path, paste0(measure, ".png"))
+      ggsave(
+        file_path,
+        plot,
+        width = 16,
+        height = 6,
+        units = "cm"
+      )
+    }
+  )
+  
+  all_paths <- c(faceted_path, individual_paths)
+  return(all_paths)
   
 }
 
