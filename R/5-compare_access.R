@@ -18,7 +18,7 @@ create_boxplots <- function(city,
     scenario := factor(
       scenario,
       levels = c("depois", "contrafactual"),
-      labels = c("Previsto", "Contrafactual")
+      labels = c("Previsto", "Alternativo")
     )
   ]
   access_diff <- access_diff[travel_time == get("travel_time", envir = env)]
@@ -349,7 +349,7 @@ create_diff_maps <- function(city,
     scenario := factor(
       scenario,
       levels = c("depois", "contrafactual"),
-      labels = c("Previsto", "Contrafactual")
+      labels = c("Previsto", "Alternativo")
     )
   ]
   access_diff[
@@ -571,7 +571,7 @@ plot_summary <- function(city,
     scenario := factor(
       scenario,
       levels = c("depois", "contrafactual"),
-      labels = c("Previsto", "Contrafactual")
+      labels = c("Previsto", "Alternativo")
     )
   ]
   
@@ -872,7 +872,7 @@ compare_palma <- function(city, access_paths, scenarios, grid_path) {
     scenario := factor(
       scenario,
       levels = c("antes", "depois", "contrafactual"),
-      labels = c("Antes", "Depois (Previsto)", "Depois (Contrafactual)")
+      labels = c("Antes", "Depois (Previsto)", "Depois (Alternativo)")
     )
   ]
   
@@ -1071,7 +1071,7 @@ compare_gains <- function(city, access_diff_path, grid_path) {
     scenario := factor(
       scenario,
       levels = c("depois", "contrafactual"),
-      labels = c("Previsto", "Contrafactual")
+      labels = c("Previsto", "Alternativo")
     )
   ]
   
