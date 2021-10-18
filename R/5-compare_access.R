@@ -1128,14 +1128,15 @@ compare_gains <- function(city, access_diff_path, grid_path) {
       color = "gray75"
     ) +
     geom_line(aes(travel_time, weighted_median, color = scenario)) +
-    geom_errorbar(
-      aes(travel_time, ymin = q1, ymax = q3, color = scenario),
+    geom_ribbon(
+      aes(travel_time, ymin = q1, ymax = q3, fill = scenario),
       alpha = 0.5
     ) +
     facet_wrap(~ opportunities_factor, scales = "free") +
     scale_y_continuous(name = "Ganho de acessibilidade") +
     scale_x_continuous(name = "Limite de tempo de viagem") +
     scale_color_discrete(name = "Cenário") +
+    scale_fill_discrete(name = "Cenário") +
     plot_theme
   
   # save the result and store the path
@@ -1177,13 +1178,14 @@ compare_gains <- function(city, access_diff_path, grid_path) {
           color = "gray75"
         ) +
         geom_line(aes(travel_time, weighted_median, color = scenario)) +
-        geom_errorbar(
-          aes(travel_time, ymin = q1, ymax = q3, color = scenario),
+        geom_ribbon(
+          aes(travel_time, ymin = q1, ymax = q3, fill = scenario),
           alpha = 0.5
         ) +
         scale_y_continuous(name = "Ganho de acessibilidade") +
         scale_x_continuous(name = "Limite de tempo de viagem") +
         scale_color_discrete(name = "Cenário") +
+        scale_fill_discrete(name = "Cenário") +
         plot_theme
       
       # save and return the result so the target follows the file
