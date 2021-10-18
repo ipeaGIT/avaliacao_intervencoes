@@ -965,7 +965,10 @@ compare_palma <- function(city, access_paths, scenarios, grid_path) {
       expand = expansion(mult = c(0.0125, 0))
     ) +
     scale_x_continuous(name = "Limite de tempo de viagem") +
-    scale_color_discrete(name = "Cenário") +
+    scale_color_discrete(
+      name = "Cenário",
+      type = c("gray50", "#F8766D", "#00BFC4")
+    ) +
     expand_limits(y = 0) +
     plot_theme
   
@@ -1023,7 +1026,10 @@ compare_palma <- function(city, access_paths, scenarios, grid_path) {
           expand = expansion(mult = c(0.0125, 0))
         ) +
         scale_x_continuous(name = "Limite de tempo de viagem") +
-        scale_color_discrete(name = "Cenário") +
+        scale_color_discrete(
+          name = "Cenário",
+          type = c("gray50", "#F8766D", "#00BFC4")
+        ) +
         expand_limits(y = 0) +
         plot_theme
       
