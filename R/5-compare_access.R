@@ -82,7 +82,9 @@ create_boxplots <- function(city,
         theme_minimal() +
         theme(
           axis.text.x = element_blank(),
-          panel.grid = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.grid.major = element_line(color = "gray93"),
+          panel.grid.major.x = element_blank(),
           plot.subtitle = element_markdown(),
           legend.position = "bottom",
           legend.text.align = 0.5,
