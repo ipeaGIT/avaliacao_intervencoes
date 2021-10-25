@@ -26,7 +26,7 @@ list(
   ),
   tar_target(
     both_cities,
-    c("for", "goi")
+    c("for")
   ),
   tar_target(
     scenarios,

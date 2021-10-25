@@ -253,26 +253,6 @@ create_dist_maps <- function(city,
     FUN = function(measure) {
       relevant_var <- paste0("only_transit_", measure)
       
-      # access[
-      #   ,
-      #   cde := cut(
-      #     get(relevant_var),
-      #     breaks = BAMMtools::getJenksBreaks(get(relevant_var), 11)
-      #   )
-      # ]
-      # 
-      # access[
-      #   ,
-      #   abc := cut(
-      #     get(relevant_var),
-      #     breaks = quantile(
-      #       get(relevant_var),
-      #       probs = seq(0, 1, 0.1),
-      #       include.lowest = TRUE
-      #     )
-      #   )
-      # ]
-      
       label <- if (grepl("TT", measure)) {
         scales::label_number(
           accuracy = 1,
