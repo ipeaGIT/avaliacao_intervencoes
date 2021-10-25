@@ -109,12 +109,14 @@ palma_bars_b978f3ca|branch|bef8fa9c703c71a1|a3a41310ccd702aa|63390a4874e020fc|-1
 palma_bars|pattern|e402482e6e0e659a|a3a41310ccd702aa||2065904774||||57203|file|vector||palma_bars_b978f3ca|1.07||
 transit_access_diff_62410de1|branch|1c324a063b023a56|60b7c1488a9e18c3|09ce0271ddcb279e|1872551696|../../data/avaliacao_intervencoes/for/output_access/transit_access_diff.rds|t18925.6739351852s|7870d53ae6db2726|3975176|file|vector|transit_access_diff||2.47|measure.vars only_transit_CMAET_abs, only_transit_CMAET_rel, ... are not all of the same type. By order of hierarchy, the molten data value column will be of type double. All measure variables not of type double will be coerced too. Check DETAILS in melt.data.table for more on coercion.|
 transit_access_diff|pattern|1cbd77bdf9b39ff1|60b7c1488a9e18c3||-391332062||||3975176|file|vector||transit_access_diff_62410de1|2.47||
-all_modes_summary_4b7034b3|branch|7fafc02c1442a001|3c4171a11425ca60|76ccf0ab717b223b|1029709195|../../data/avaliacao_intervencoes/for/figures/summary_bfm_bike_transit/CMATT60.png*../../data/avaliacao_intervencoes/for/figures/summary_bfm_bike_transit/CMAET60.png*../../data/avaliacao_intervencoes/for/figures/summary_bfm_bike_transit/CMASB60.png|t18925.6741898148s|a4487d6860a9f17a|998272|file|vector|all_modes_summary||17.89||
-all_modes_summary|pattern|d2e46e20da4c11f6|3c4171a11425ca60||1186706430||||998272|file|vector||all_modes_summary_4b7034b3|17.89||
 difference_maps_60820872|branch|93a00ff0d0e02159|c3c71c241e944def|addddf67165db92d|1721859681|../../data/avaliacao_intervencoes/for/figures/map_difference/CMATT60.png*../../data/avaliacao_intervencoes/for/figures/map_difference/CMAET60.png*../../data/avaliacao_intervencoes/for/figures/map_difference/CMASB60.png|t18925.6742708333s|437ea1457343bee8|472650|file|vector|difference_maps||7.03||
 difference_maps|pattern|46d1a1f15b6894e0|c3c71c241e944def||-1491009712||||472650|file|vector||difference_maps_60820872|7.03||
 difference_boxplot_60820872|branch|da5d7a1609248aec|10631ab5c5b901f2|afa66fa3c023d917|-1374761570|../../data/avaliacao_intervencoes/for/figures/boxplot_difference/CMATT60.png*../../data/avaliacao_intervencoes/for/figures/boxplot_difference/CMAET60.png*../../data/avaliacao_intervencoes/for/figures/boxplot_difference/CMASB60.png|t18925.6743518519s|79a69f965b98b2f0|93121|file|vector|difference_boxplot||3.58||
 difference_boxplot|pattern|27c7e81573e39b50|10631ab5c5b901f2||624006850||||93121|file|vector||difference_boxplot_60820872|3.58||
+palma_comparison_5b649fad|branch|85d2aa827ee0a518|623e72f69ec14be1|e38149d1474d40e8|-1888042275|../../data/avaliacao_intervencoes/for/figures/palma_comparison/faceted.png*../../data/avaliacao_intervencoes/for/figures/palma_comparison/CMATT.png*../../data/avaliacao_intervencoes/for/figures/palma_comparison/CMAET.png*../../data/avaliacao_intervencoes/for/figures/palma_comparison/CMASB.png|t18925.6840046296s|385e1dfdc948dc70|98348|file|vector|palma_comparison||3.58||
+palma_comparison|pattern|21f70619e59e9319|623e72f69ec14be1||1616989465||||98348|file|vector||palma_comparison_5b649fad|3.58||
+access_gains_comparison_9f47b79d|branch|7831ffb816e5173a|ab8040cc274cb596|822c889652beb13e|707784414|../../data/avaliacao_intervencoes/for/figures/access_gains_comparison/faceted.png*../../data/avaliacao_intervencoes/for/figures/access_gains_comparison/CMATT.png*../../data/avaliacao_intervencoes/for/figures/access_gains_comparison/CMAET.png*../../data/avaliacao_intervencoes/for/figures/access_gains_comparison/CMASB.png|t18925.6840393519s|3e783e15751ac7ce|87155|file|vector|access_gains_comparison||3.43||
+access_gains_comparison|pattern|48b6ded724c38700|ab8040cc274cb596||2062701695||||87155|file|vector||access_gains_comparison_9f47b79d|3.43||
 bfm_ttm|function|209b123c2e6c00b0||||||||||||||
 round_up|function|b5c171c1bf69fd68||||||||||||||
 create_diff_maps|function|376f2f02eb4f5dd1||||||||||||||
@@ -123,10 +125,10 @@ calculate_palma|function|d0fef0a310f0fa81||||||||||||||
 calculate_access_diff|function|9479bc398b15a28e||||||||||||||
 create_palma_bars|function|0af24ade18133a21||||||||||||||
 join_ttms|function|612e3ee44568cd55||||||||||||||
-.Random.seed|object|8dbaf5e5f9f9c425||||||||||||||
+.Random.seed|object|c7b17b2fe33cab46||||||||||||||
 create_points_r5|function|aeed5864aacd6641||||||||||||||
 bike_ttm|function|37069c3032a9ff24||||||||||||||
-plot_summary|function|c13ad265008c808e||||||||||||||
+plot_summary|function|97e0e67c0f64c6c0||||||||||||||
 transit_ttm|function|04e9b1675bfa884c||||||||||||||
 exploratory_report|function|fea3df32d8cb5c61||||||||||||||
 create_boxplots|function|3c0e6c6a572d28ba||||||||||||||
@@ -134,7 +136,5 @@ calculate_accessibility|function|49e68e9c7ea7b54c||||||||||||||
 compare_gains|function|e6243698765a9f12||||||||||||||
 create_dist_maps|function|f9c679455d899adf||||||||||||||
 create_accessibility_data|function|32827f686411777f||||||||||||||
-palma_comparison_5b649fad|branch|85d2aa827ee0a518|623e72f69ec14be1|e38149d1474d40e8|-1888042275|../../data/avaliacao_intervencoes/for/figures/palma_comparison/faceted.png*../../data/avaliacao_intervencoes/for/figures/palma_comparison/CMATT.png*../../data/avaliacao_intervencoes/for/figures/palma_comparison/CMAET.png*../../data/avaliacao_intervencoes/for/figures/palma_comparison/CMASB.png|t18925.6840046296s|385e1dfdc948dc70|98348|file|vector|palma_comparison||3.58||
-palma_comparison|pattern|21f70619e59e9319|623e72f69ec14be1||1616989465||||98348|file|vector||palma_comparison_5b649fad|3.58||
-access_gains_comparison_9f47b79d|branch|7831ffb816e5173a|ab8040cc274cb596|822c889652beb13e|707784414|../../data/avaliacao_intervencoes/for/figures/access_gains_comparison/faceted.png*../../data/avaliacao_intervencoes/for/figures/access_gains_comparison/CMATT.png*../../data/avaliacao_intervencoes/for/figures/access_gains_comparison/CMAET.png*../../data/avaliacao_intervencoes/for/figures/access_gains_comparison/CMASB.png|t18925.6840393519s|3e783e15751ac7ce|87155|file|vector|access_gains_comparison||3.43||
-access_gains_comparison|pattern|48b6ded724c38700|ab8040cc274cb596||2062701695||||87155|file|vector||access_gains_comparison_9f47b79d|3.43||
+all_modes_summary_4b7034b3|branch|d715db716c7b6f98|3c4171a11425ca60|36ff4cd63a3c2d9d|1029709195|../../data/avaliacao_intervencoes/for/figures/summary_bfm_bike_transit/CMATT60.png*../../data/avaliacao_intervencoes/for/figures/summary_bfm_bike_transit/CMAET60.png*../../data/avaliacao_intervencoes/for/figures/summary_bfm_bike_transit/CMASB60.png|t18925.7456018519s|42211ae807a32b9f|1182396|file|vector|all_modes_summary||20.84||
+all_modes_summary|pattern|1e4cf01e1118fbb8|3c4171a11425ca60||1186706430||||1182396|file|vector||all_modes_summary_4b7034b3|20.84||

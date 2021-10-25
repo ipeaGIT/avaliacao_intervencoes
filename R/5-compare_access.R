@@ -567,6 +567,14 @@ plot_summary <- function(city,
     on = c(fromId = "id_hex"),
     `:=`(geometry = i.geometry, decil = i.decil, pop = i.pop_total)
   ]
+  access[
+    ,
+    scenario := factor(
+      scenario,
+      levels = c("antes", "depois", "contrafactual"),
+      labels = c("Antes", "Depois (Previsto)", "Depois (Alternativo)")
+    )
+  ]
   
   access_diff <- access_diff[type == "abs"]
   access_diff <- access_diff[travel_time == get("travel_time", envir = env)]
@@ -627,13 +635,18 @@ plot_summary <- function(city,
   
   transit_shapes <- rbind(
     transit_shapes,
+    transit_shapes,
     transit_shapes[origin_file != "shapes"]
   )
   transit_shapes[
     ,
     scenario := factor(
-      c(rep("Depois", n_trips), rep("Antes", n_trips - 1)),
-      levels = c("Antes", "Depois")
+      c(
+        rep("Depois (Alternativo)", n_trips),
+        rep("Depois (Previsto)", n_trips),
+        rep("Antes", n_trips - 1)
+      ),
+      levels = c("Antes", "Depois (Previsto)", "Depois (Alternativo)")
     )
   ]
   
@@ -659,17 +672,6 @@ plot_summary <- function(city,
       }
       
       # first row - accessibility distribution
-      # dont include counterfactual scenario in this plot
-      
-      access <- access[scenario != "contrafactual"]
-      access[
-        ,
-        scenario := factor(
-          scenario,
-          levels = c("antes", "depois"),
-          labels = c("Antes", "Depois")
-        )
-      ]
       
       map_dist <- ggplot() +
         geom_sf(data = state_shape, fill = "#efeeec", color = "gray75") +
@@ -700,6 +702,7 @@ plot_summary <- function(city,
           panel.grid = element_blank(),
           strip.text = element_text(size = 11),
           legend.justification = "left",
+          legend.title = element_text(size = 10),
           panel.background = element_rect(fill = "#aadaff", color = NA)
         )
       
@@ -770,10 +773,11 @@ plot_summary <- function(city,
           panel.grid = element_blank(),
           strip.text = element_text(size = 11),
           legend.justification = "left",
+          legend.title = element_text(size = 10),
           panel.background = element_rect(fill = "#aadaff", color = NA)
         )
       
-      # third row - accessibility differences distribution boxplo
+      # third row - accessibility differences distribution boxplot
       
       access_diff <- access_diff[decil > 0, ]
       
@@ -813,9 +817,12 @@ plot_summary <- function(city,
         theme(
           axis.text.x = element_blank(),
           axis.title.x = element_blank(),
-          panel.grid = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.grid.major = element_line(color = "gray93"),
+          panel.grid.major.x = element_blank(),
           strip.text = element_text(size = 11),
-          legend.justification = "left"
+          legend.justification = "left",
+          legend.title = element_text(size = 10)
         )
       
       # join all three rows in a single plot
@@ -826,7 +833,10 @@ plot_summary <- function(city,
         boxplot_diff,
         ncol = 1,
         labels = c("A)", "B)", "C)"),
-        align = "v"
+        rel_heights = c(0.73, 1, 1),
+        align = "v",
+        axis = "lr"
+        
       )
       
       # save the result and return the path
@@ -845,8 +855,7 @@ plot_summary <- function(city,
       ggsave(
         file_path,
         final_plot,
-        width = 16,
-        height = 15.5,
+        width = 18,
         units = "cm"
       )
       
