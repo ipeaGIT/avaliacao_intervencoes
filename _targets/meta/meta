@@ -125,10 +125,10 @@ calculate_palma|function|d0fef0a310f0fa81||||||||||||||
 calculate_access_diff|function|9479bc398b15a28e||||||||||||||
 create_palma_bars|function|0af24ade18133a21||||||||||||||
 join_ttms|function|612e3ee44568cd55||||||||||||||
-.Random.seed|object|c7b17b2fe33cab46||||||||||||||
+.Random.seed|object|a9a9e014dca9dd5b||||||||||||||
 create_points_r5|function|aeed5864aacd6641||||||||||||||
 bike_ttm|function|37069c3032a9ff24||||||||||||||
-plot_summary|function|97e0e67c0f64c6c0||||||||||||||
+plot_summary|function|7ec3909539d84226||||||||||||||
 transit_ttm|function|04e9b1675bfa884c||||||||||||||
 exploratory_report|function|fea3df32d8cb5c61||||||||||||||
 create_boxplots|function|3c0e6c6a572d28ba||||||||||||||
@@ -136,5 +136,5 @@ calculate_accessibility|function|49e68e9c7ea7b54c||||||||||||||
 compare_gains|function|e6243698765a9f12||||||||||||||
 create_dist_maps|function|f9c679455d899adf||||||||||||||
 create_accessibility_data|function|32827f686411777f||||||||||||||
-all_modes_summary_4b7034b3|branch|d715db716c7b6f98|3c4171a11425ca60|36ff4cd63a3c2d9d|1029709195|../../data/avaliacao_intervencoes/for/figures/summary_bfm_bike_transit/CMATT60.png*../../data/avaliacao_intervencoes/for/figures/summary_bfm_bike_transit/CMAET60.png*../../data/avaliacao_intervencoes/for/figures/summary_bfm_bike_transit/CMASB60.png|t18925.7456018519s|42211ae807a32b9f|1182396|file|vector|all_modes_summary||20.84||
-all_modes_summary|pattern|1e4cf01e1118fbb8|3c4171a11425ca60||1186706430||||1182396|file|vector||all_modes_summary_4b7034b3|20.84||
+all_modes_summary_4b7034b3|branch|4d66a9c3a3278636|3c4171a11425ca60|4c7637f8db2b37be|1029709195|../../data/avaliacao_intervencoes/for/figures/summary_bfm_bike_transit/CMATT60.png*../../data/avaliacao_intervencoes/for/figures/summary_bfm_bike_transit/CMAET60.png*../../data/avaliacao_intervencoes/for/figures/summary_bfm_bike_transit/CMASB60.png|t18925.8310300926s|c23571f0249560a2|1220150|file|vector|all_modes_summary||21.75||
+all_modes_summary|pattern|2fe1c04bb000e9c8|3c4171a11425ca60||1186706430||||1220150|file|vector||all_modes_summary_4b7034b3|21.75||

@@ -650,9 +650,43 @@ plot_summary <- function(city,
     )
   ]
   
-  # three different plots
+  # create dataframe holding the palma ratio of the distribution of access to
+  # each kind of opportunity
   
   measures <- c("CMATT", "CMAET", "CMASB")
+  relevant_vars <- paste0("only_transit_", measures)
+  
+  access_palma <- access[
+    ,
+    .(dist = list(.SD)),
+    by = scenario,
+    .SDcols = c(relevant_vars, "pop", "decil")
+  ]
+  
+  # calculate the palma ratio for each relevant_var
+  
+  palma_expr <- paste0(
+    measures,
+    "=",
+    "vapply(dist, function(dt) calculate_palma(dt,'", relevant_vars,
+    "'), numeric(1))",
+    collapse = ", "
+  )
+  palma_expr <- paste0("`:=`(", palma_expr, ")")
+  
+  access_palma[, eval(parse(text = palma_expr))]
+  
+  # melt the data to create a faceted chart
+  
+  access_palma <- melt(
+    access_palma,
+    id.vars = "scenario",
+    measure.vars = measures,
+    variable.name = "opportunities",
+    value.name = "palma"
+  )
+  
+  # individual plots for each measure
   
   vapply(
     measures,
@@ -706,7 +740,40 @@ plot_summary <- function(city,
           panel.background = element_rect(fill = "#aadaff", color = NA)
         )
       
-      # second row - accessibility differences distribution map
+      # fourth row - palma ratio bars
+      # first create a data.table to position label on top of each bar
+      
+      filtered_palma <- access_palma[opportunities == measure]
+      filtered_palma <- filtered_palma[
+        ,
+        `:=`(
+          y_pos = palma - max(palma) * 0.05,
+          palma_text = format(palma, digits = 2, nsmall = 2)
+        )
+      ]
+      
+      palma_bars <- ggplot(filtered_palma) +
+        geom_col(aes(scenario, palma, fill = scenario)) +
+        geom_text(
+          aes(x = scenario, y = y_pos, label = palma_text),
+          color = "white",
+          vjust = 1,
+          size = 6
+        ) +
+        scale_y_continuous(name = "Razão de Palma") +
+        scale_x_discrete(name = "Cenário") +
+        scale_fill_discrete(
+          name = "Cenário",
+          type = c("gray50", "#F8766D", "#00BFC4")
+        ) +
+        theme_minimal() +
+        theme(
+          panel.grid = element_blank(),
+          axis.text.y = element_blank(),
+          legend.position = "none"
+        )
+      
+      # third row - accessibility differences distribution map
       # truncate values for each measure
       # remove 'scenario' column from 'transit_shapes' so it doesnt create extra
       # facets
@@ -777,7 +844,7 @@ plot_summary <- function(city,
           panel.background = element_rect(fill = "#aadaff", color = NA)
         )
       
-      # third row - accessibility differences distribution boxplot
+      # fourth row - accessibility differences distribution boxplot
       
       access_diff <- access_diff[decil > 0, ]
       
@@ -825,15 +892,16 @@ plot_summary <- function(city,
           legend.title = element_text(size = 10)
         )
       
-      # join all three rows in a single plot
+      # join all four rows rows in a single plot
       
       final_plot <- cowplot::plot_grid(
         map_dist,
+        palma_bars,
         map_diff,
         boxplot_diff,
         ncol = 1,
-        labels = c("A)", "B)", "C)"),
-        rel_heights = c(0.73, 1, 1),
+        labels = c("A)", "B)", "C)", "D)"),
+        rel_heights = c(1.01, 1, 1.41, 1),
         align = "v",
         axis = "lr"
         
@@ -856,6 +924,7 @@ plot_summary <- function(city,
         file_path,
         final_plot,
         width = 18,
+        height = 20,
         units = "cm"
       )
       
