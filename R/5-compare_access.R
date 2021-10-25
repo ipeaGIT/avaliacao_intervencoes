@@ -1117,7 +1117,8 @@ compare_palma <- function(city, access_paths, scenarios, grid_path) {
       type = c("gray50", "#F8766D", "#00BFC4")
     ) +
     expand_limits(y = 0) +
-    plot_theme
+    plot_theme +
+    theme(legend.position = "bottom")
   
   # save the result and store the path
   
@@ -1290,7 +1291,8 @@ compare_gains <- function(city, access_diff_path, grid_path) {
     scale_x_continuous(name = "Limite de tempo de viagem") +
     scale_color_discrete(name = "Cenário") +
     scale_fill_discrete(name = "Cenário") +
-    plot_theme
+    plot_theme +
+    theme(legend.position = "bottom")
   
   # save the result and store the path
   
