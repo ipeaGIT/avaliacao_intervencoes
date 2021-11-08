@@ -747,7 +747,7 @@ plot_summary <- function(city,
       filtered_palma <- filtered_palma[
         ,
         `:=`(
-          y_pos = palma - max(palma) * 0.05,
+          y_pos = palma + max(palma) * 0.05,
           palma_text = format(palma, digits = 2, nsmall = 2)
         )
       ]
@@ -756,10 +756,19 @@ plot_summary <- function(city,
         geom_col(aes(scenario, palma, fill = scenario)) +
         geom_text(
           aes(x = scenario, y = y_pos, label = palma_text),
-          color = "white",
-          vjust = 1,
+          color = "gray20",
+          vjust = 0,
           size = 6
         ) +
+        geom_segment(
+          aes(
+            x = 0.5, y = 1,
+            xend = 3.5, yend = 1
+          ),
+          color = "gray40",
+          linetype = "longdash"
+        ) +
+        coord_cartesian(ylim = c(0, max(filtered_palma$palma) * 1.17)) +
         scale_y_continuous(name = "Razão de Palma") +
         scale_x_discrete(name = "Cenário") +
         scale_fill_discrete(
@@ -768,8 +777,9 @@ plot_summary <- function(city,
         ) +
         theme_minimal() +
         theme(
-          panel.grid = element_blank(),
-          axis.text.y = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.grid.major = element_line(color = "gray93"),
+          panel.grid.major.x = element_blank(),
           legend.position = "none"
         )
       
@@ -1021,7 +1031,7 @@ create_palma_bars <- function(city,
       label_pos <- copy(filtered_access)[
         ,
         `:=`(
-          y_pos = palma - max(palma) * 0.05,
+          y_pos = palma + max(palma) * 0.05,
           palma_text = format(palma, digits = 2, nsmall = 2)
         )
       ]
@@ -1031,9 +1041,17 @@ create_palma_bars <- function(city,
         geom_text(
           data = label_pos,
           aes(x = scenario, y = y_pos, label = palma_text),
-          color = "white",
-          vjust = 1,
+          color = "gray20",
+          vjust = 0,
           size = 6
+        ) +
+        geom_segment(
+          aes(
+            x = 0.5, y = 1,
+            xend = 3.5, yend = 1
+          ),
+          color = "gray40",
+          linetype = "longdash"
         ) +
         scale_y_continuous(name = "Razão de Palma") +
         scale_x_discrete(name = "Cenário") +
@@ -1041,10 +1059,12 @@ create_palma_bars <- function(city,
           name = "Cenário",
           type = c("gray50", "#F8766D", "#00BFC4")
         ) +
+        coord_cartesian(ylim = c(0, max(filtered_access$palma) * 1.12)) +
         theme_minimal() +
         theme(
-          panel.grid = element_blank(),
-          axis.text.y = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.grid.major = element_line(color = "gray95"),
+          panel.grid.major.x = element_blank(),
           legend.position = "none"
         )
       
