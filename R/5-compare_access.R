@@ -1460,6 +1460,76 @@ compare_gains <- function(city, access_diff_path, grid_path) {
 }
 
 
+# city <- tar_read(both_cities)[1]
+# access_diff_path <- tar_read(transit_access_diff)[1]
+# grid_path <- tar_read(grid_path)[1]
+calculate_avg_gains <- function(city,
+                                access_diff_path,
+                                grid_path) {
+  
+  grid <- setDT(readRDS(grid_path))
+  
+  relevant_vars <- paste0("only_transit_", c("CMATT", "CMAET", "CMASB"))
+  
+  access_diff <- readRDS(access_diff_path)
+  access_diff <- access_diff[type == "rel" & travel_time == 60]
+  access_diff <- melt(
+    access_diff,
+    measure.vars = relevant_vars,
+    variable.name = "opportunity",
+    value.name = "difference"
+  )
+  access_diff[, opportunity := gsub("only_transit_", "", opportunity)]
+  access_diff[
+    grid,
+    on = c(fromId = "id_hex"),
+    `:=`(pop = i.pop_total)
+  ]
+  
+  # weighted mean
+  
+  avg_gains <- access_diff[
+    ,
+    .(avg_gain = weighted.mean(difference, w = pop)),
+    by = .(scenario, opportunity)
+  ]
+  
+  # polishing
+  
+  avg_gains[
+    ,
+    avg_gain := paste0(
+      format(avg_gain * 100, digits = 1, nsmall = 1),
+      "%"
+    )
+  ]
+  avg_gains[
+    ,
+    scenario := factor(
+      scenario,
+      levels = c("depois", "contrafactual"),
+      labels = c("Previsto", "Alternativo")
+    )
+  ]
+  avg_gains[
+    ,
+    opportunity := factor(
+      opportunity,
+      levels = c("CMATT", "CMAET", "CMASB"),
+      labels = c("Emprego", "Educação", "Saúde")
+    )
+  ]
+  avg_gains <- dcast(
+    avg_gains,
+    scenario ~ opportunity,
+    value.var = "avg_gain"
+  )
+
+  return(avg_gains)
+  
+}
+
+
 calculate_palma <- function(access, relevant_var) {
   
   richest_10 <- access[decil == 10]
